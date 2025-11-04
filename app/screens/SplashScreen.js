@@ -1,23 +1,29 @@
-import { useEffect } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import React, { useEffect } from "react";
+import { ActivityIndicator, Image, StyleSheet, View } from "react-native";
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
-    const timer = setTimeout(() => {
+    if (navigation && navigation.replace) {
       navigation.replace("Onboarding");
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
+    } else {
+      console.warn("Navigation not ready yet!");
+    }
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
-      <Image source={require("../assets/images/logo.png")} style={styles.logo} />
-
+      <Image source={require("../../assets/logo.png")} style={styles.logo} />
+      <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#6C63FF" },
-  logo: { width: 120, height: 120, resizeMode: "contain" },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  logo: { width: 150, height: 150, resizeMode: "contain" },
 });
