@@ -3,19 +3,18 @@ import { View, Image, ActivityIndicator, StyleSheet } from "react-native";
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
-    const t = setTimeout(() => navigation.replace("Onboarding"), 1800);
-    return () => clearTimeout(t);
+    setTimeout(() => navigation.replace("Onboarding"), 2000);
   }, []);
 
   return (
     <View style={styles.container}>
-      <Image source={require("../../assets/logo.png")} style={styles.logo} />
-      <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 24 }} />
+      <Image source={require("../assets/onboarding1.png")} style={styles.logo} />
+      <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 20 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
   logo: { width: 150, height: 150, resizeMode: "contain" },
 });
