@@ -1,47 +1,77 @@
-import React from "react";
-import { View, Text, TouchableOpacity, FlatList, StyleSheet } from "react-native";
-import MedicationCard from "../components/MedicationCard";
+import React, { useEffect, useState } from "react";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomeScreen({ navigation }) {
-  const meds = [
-    { id: "1", name: "Amoxicillin", time: "8:00 AM" },
-    { id: "2", name: "Vitamin D", time: "2:00 PM" },
-  ];
+  const [userGender, setUserGender] = useState("male");
+  const [userName, setUserName] = useState("User");
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const gender = await AsyncStorage.getItem("userGender");
+        const name = await AsyncStorage.getItem("userName");
+        if (gender) setUserGender(gender);
+        if (name) setUserName(name);
+      } catch (error) {
+        console.warn("Failed to load user data:", error);
+      }
+    };
+    loadUser();
+  }, []);
+
+  const avatar =
+    userGender === "female"
+      ? require("../../assets/avatar_female.png")
+      : require("../../assets/avatar_male.png");
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Medications</Text>
+      <View style={styles.header}>
+        <Image source={avatar} style={styles.avatar} />
+        <Text style={styles.welcome}>Hi, {userName} 👋</Text>
+        <Text style={styles.subtext}>Stay on top of your meds today</Text>
+      </View>
 
-      <FlatList
-        data={meds}
-        renderItem={({ item }) => <MedicationCard med={item} />}
-        keyExtractor={(item) => item.id}
-      />
+      <View style={styles.buttons}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("AddMedication")}
+        >
+          <Text style={styles.buttonText}>Add Medication</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate("AddMedication")}
-      >
-        <Text style={styles.fabText}>＋</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Streak")}
+        >
+          <Text style={styles.buttonText}>View Streak</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("Profile")}
+        >
+          <Text style={styles.buttonText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    backgroundColor: "#6C63FF",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
+  container: { flex: 1, backgroundColor: "#fff", padding: 25 },
+  header: { alignItems: "center", marginTop: 60 },
+  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 20 },
+  welcome: { fontSize: 22, fontWeight: "bold", color: "#003366" },
+  subtext: { fontSize: 14, color: "#666", marginTop: 5 },
+  buttons: { marginTop: 50 },
+  button: {
+    backgroundColor: "#007BFF",
+    paddingVertical: 15,
+    borderRadius: 10,
+    marginBottom: 20,
     alignItems: "center",
-    elevation: 5,
   },
-  fabText: { color: "#fff", fontSize: 28, lineHeight: 32 },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

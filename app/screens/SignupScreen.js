@@ -1,95 +1,61 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function SignupScreen({ navigation }) {
+export default function Signup({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [gender, setGender] = useState("male");
 
-  const handleSignup = () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+  const handleSignup = async () => {
+    try {
+      await AsyncStorage.setItem("userGender", gender);
+      await AsyncStorage.setItem("userName", name);
+      navigation.replace("Home");
+    } catch (error) {
+      console.error("Error saving user data:", error);
     }
-
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
-
-    // ✅ Simulate signup success
-    Alert.alert("Success", "Account created successfully!");
-    navigation.replace("Home");
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Full Name"
-        value={name}
-        onChangeText={setName}
-      />
+      <TextInput placeholder="Name" style={styles.input} value={name} onChangeText={setName} />
+      <TextInput placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} />
+      <TextInput placeholder="Password" style={styles.input} secureTextEntry value={password} onChangeText={setPassword} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email Address"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
+      <View style={styles.genderRow}>
+        <TouchableOpacity
+          style={[styles.genderButton, gender === "male" && styles.selected]}
+          onPress={() => setGender("male")}
+        >
+          <Text style={styles.genderText}>Male</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.genderButton, gender === "female" && styles.selected]}
+          onPress={() => setGender("female")}
+        >
+          <Text style={styles.genderText}>Female</Text>
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity style={styles.button} onPress={handleSignup}>
         <Text style={styles.buttonText}>Sign Up</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.link}>Already have an account? Log in</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 30 },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
-    color: "#2E2E2E",
-  },
-  input: {
-    backgroundColor: "#f0f0f0",
-    padding: 15,
-    borderRadius: 10,
-    marginVertical: 10,
-  },
-  button: {
-    backgroundColor: "#6C63FF",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  buttonText: { color: "#fff", fontWeight: "bold", textAlign: "center" },
-  link: { textAlign: "center", color: "#6C63FF", marginTop: 20 },
+  container: { flex: 1, justifyContent: "center", padding: 25, backgroundColor: "#fff" },
+  title: { fontSize: 24, fontWeight: "bold", color: "#003366", marginBottom: 25, textAlign: "center" },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 10, padding: 12, marginBottom: 15 },
+  genderRow: { flexDirection: "row", justifyContent: "space-between", marginVertical: 15 },
+  genderButton: { flex: 1, padding: 12, marginHorizontal: 5, borderWidth: 1, borderColor: "#ccc", borderRadius: 10 },
+  selected: { backgroundColor: "#007BFF", borderColor: "#007BFF" },
+  genderText: { color: "#003366", textAlign: "center", fontWeight: "bold" },
+  button: { backgroundColor: "#007BFF", borderRadius: 10, padding: 15, marginTop: 20 },
+  buttonText: { color: "#fff", textAlign: "center", fontWeight: "bold", fontSize: 16 },
 });
