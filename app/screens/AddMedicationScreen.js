@@ -1,114 +1,130 @@
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useState } from "react";
-import {
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function AddMedicationScreen({ navigation }) {
-  const [name, setName] = useState("");
-  const [dosage, setDosage] = useState("");
-  const [time, setTime] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);
+export default function AddMedicationScreen() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [dosage, setDosage] = useState('');
+  const [frequency, setFrequency] = useState('Daily');
+  const [time, setTime] = useState('09:00');
+  const [notes, setNotes] = useState('');
 
-  const saveMedication = async () => {
-    if (!name.trim() || !dosage.trim()) {
-      alert("Please fill all fields.");
-      return;
-    }
+  const frequencies = ['Daily', 'Weekly', 'Monthly'];
+
+  const handleSave = async () => {
+    if (!name || !dosage) return;
 
     const newMed = {
-      id: Date.now(),
       name,
       dosage,
-      time: time.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      frequency,
+      time,
+      notes,
       taken: false,
+      color: '#E8EBFF',
     };
 
-    try {
-      const existing = await AsyncStorage.getItem("medications");
-      const meds = existing ? JSON.parse(existing) : [];
-      meds.push(newMed);
-      await AsyncStorage.setItem("medications", JSON.stringify(meds));
-      alert("Medication saved ✅");
-      navigation.goBack();
-    } catch (error) {
-      console.error("Error saving medication:", error);
-    }
-  };
+    const medsStr = await AsyncStorage.getItem('medications');
+    const meds = medsStr ? JSON.parse(medsStr) : [];
+    meds.push(newMed);
+    await AsyncStorage.setItem('medications', JSON.stringify(meds));
 
-  const onTimeChange = (event, selectedTime) => {
-    if (Platform.OS === "android") setShowPicker(false);
-    if (selectedTime) setTime(selectedTime);
+    router.back();
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add New Medication</Text>
-
-      {/* Name Input */}
-      <View style={styles.inputCard}>
-        <Text style={styles.label}>Medication Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Paracetamol"
-          value={name}
-          onChangeText={setName}
-          placeholderTextColor="#aaa"
-        />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#1E1E1E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Medication</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      {/* Dosage Input */}
-      <View style={styles.inputCard}>
-        <Text style={styles.label}>Dosage</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 500mg"
-          value={dosage}
-          onChangeText={setDosage}
-          placeholderTextColor="#aaa"
-        />
-      </View>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Medication Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter medication name"
+              placeholderTextColor="#9CA3AF"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
-      {/* Time Picker */}
-      <View style={styles.inputCard}>
-        <Text style={styles.label}>Time</Text>
-        <TouchableOpacity
-          style={styles.timePicker}
-          onPress={() => setShowPicker(true)}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Dosage</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., 500mg"
+              placeholderTextColor="#9CA3AF"
+              value={dosage}
+              onChangeText={setDosage}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Frequency</Text>
+            <View style={styles.frequencyContainer}>
+              {frequencies.map((freq) => (
+                <TouchableOpacity
+                  key={freq}
+                  style={[
+                    styles.frequencyButton,
+                    frequency === freq && styles.frequencyButtonActive
+                  ]}
+                  onPress={() => setFrequency(freq)}
+                >
+                  <Text style={[
+                    styles.frequencyText,
+                    frequency === freq && styles.frequencyTextActive
+                  ]}>
+                    {freq}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Time</Text>
+            <TouchableOpacity style={styles.timeInput}>
+              <Ionicons name="time-outline" size={20} color="#6B7280" />
+              <Text style={styles.timeText}>{time}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Notes (Optional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Add any additional notes..."
+              placeholderTextColor="#9CA3AF"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity 
+          style={[styles.button, (!name || !dosage) && styles.buttonDisabled]}
+          onPress={handleSave}
+          disabled={!name || !dosage}
         >
-          <Ionicons name="time-outline" size={22} color="#1B75D0" />
-          <Text style={styles.timeText}>
-            {time.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
+          <Text style={styles.buttonText}>Save Medication</Text>
         </TouchableOpacity>
       </View>
-
-      {showPicker && (
-        <DateTimePicker
-          value={time}
-          mode="time"
-          display="spinner"
-          onChange={onTimeChange}
-        />
-      )}
-
-      {/* Save Button */}
-      <TouchableOpacity style={styles.saveButton} onPress={saveMedication}>
-        <Text style={styles.saveText}>Save Medication</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -116,55 +132,112 @@ export default function AddMedicationScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FBFF",
-    padding: 25,
-    paddingTop: 70,
+    backgroundColor: '#FFFFFF',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1B75D0",
-    marginBottom: 25,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  inputCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    marginBottom: 18,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E1E1E',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  form: {
+    paddingTop: 24,
+    gap: 24,
+    paddingBottom: 100,
+  },
+  inputContainer: {
+    gap: 8,
   },
   label: {
-    color: "#1B75D0",
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
   input: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: "#333",
+    color: '#1E1E1E',
   },
-  timePicker: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  textArea: {
+    height: 100,
+    paddingTop: 14,
+  },
+  frequencyContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  frequencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  frequencyButtonActive: {
+    backgroundColor: '#5B67CA',
+    borderColor: '#5B67CA',
+  },
+  frequencyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  frequencyTextActive: {
+    color: '#FFFFFF',
+  },
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
   timeText: {
     fontSize: 16,
-    color: "#333",
+    color: '#1E1E1E',
   },
-  saveButton: {
-    marginTop: 40,
-    backgroundColor: "#1B75D0",
+  footer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  button: {
+    backgroundColor: '#5B67CA',
     paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: "center",
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  saveText: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "600",
+  buttonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

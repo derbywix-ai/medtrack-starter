@@ -1,13 +1,10 @@
 // app/navigation/MainTabs.js
-import React from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
+import MedicationDetails from "../screens/MedicationDetails";
 import ProfileScreen from "../screens/ProfileScreen";
-import AddMedicationScreen from "../screens/AddMedicationScreen";
-import StreakScreen from "../screens/StreakScreen";
-import ReminderScreen from "../screens/ReminderScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -16,40 +13,35 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarActiveTintColor: "#007AFF",
+        tabBarInactiveTintColor: "#B0B0B0",
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "transparent",
-          elevation: 5,
-          height: 70,
+          backgroundColor: "#fff",
+          borderTopWidth: 0,
+          elevation: 10,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
         },
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          if (route.name === "HomeScreen") {
+
+          if (route.name === "Home") {
             iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "AddMedicationScreen") {
-            iconName = focused ? "add-circle" : "add-circle-outline";
-          } else if (route.name === "StreakScreen") {
-            iconName = focused ? "flame" : "flame-outline";
-          } else if (route.name === "ProfileScreen") {
+          } else if (route.name === "Medications") {
+            iconName = focused ? "medkit" : "medkit-outline";
+          } else if (route.name === "Profile") {
             iconName = focused ? "person" : "person-outline";
           }
-          return <Ionicons name={iconName} size={26} color={focused ? "#0A6EBD" : "#A0A0A0"} />;
+
+          return <Ionicons name={iconName} size={24} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="HomeScreen" component={HomeScreen} />
-      <Tab.Screen name="AddMedicationScreen" component={AddMedicationScreen} />
-      <Tab.Screen name="StreakScreen" component={StreakScreen} />
-      <Tab.Screen name="ProfileScreen" component={ProfileScreen} />
-      {/* Hidden screen for reminders */}
-      <Tab.Screen
-        name="ReminderScreen"
-        component={ReminderScreen}
-        options={{
-          tabBarButton: () => null, // hide from tab bar
-        }}
-      />
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Medications" component={MedicationDetails} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

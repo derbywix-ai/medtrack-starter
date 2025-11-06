@@ -1,34 +1,21 @@
-// app/navigation/AuthStack.js
-import { createStackNavigator } from "@react-navigation/stack";
-
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import OnboardingScreen from "../screens/OnboardingScreen";
-import PasscodeScreen from "../screens/PasscodeScreen";
-import ReminderScreen from "../screens/ReminderScreen";
-import SignInScreen from "../screens/SignInScreen";
+import LoginScreen from "../screens/LoginScreen";
 import SignUpScreen from "../screens/SignupScreen";
+import PasscodeScreen from "../screens/PasscodeScreen";
+import MainTabs from "./MainTabs";
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function AuthStack() {
   return (
-    <Stack.Navigator
-      initialRouteName="OnboardingScreen"
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      {/* Onboarding flow */}
-      <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
-
-      {/* Authentication screens */}
-      <Stack.Screen name="SignInScreen" component={SignInScreen} />
-      <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-
-      {/* Post-signup setup */}
-      <Stack.Screen name="PasscodeScreen" component={PasscodeScreen} />
-
-      {/* Optional feature screen */}
-      <Stack.Screen name="ReminderScreen" component={ReminderScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen name="Passcode" component={PasscodeScreen} />
+      <Stack.Screen name="MainTabs" component={MainTabs} />
     </Stack.Navigator>
   );
 }

@@ -1,125 +1,69 @@
-import { useRef, useState } from 'react';
-import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Swiper from 'react-native-swiper';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Swiper from "react-native-swiper";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function OnboardingScreen({ navigation }) {
-  const swiperRef = useRef(null);
-  const [index, setIndex] = useState(0);
-
   const slides = [
     {
-      key: '1',
-      title: 'Smarter Medication Tracking',
-      text: 'Track your daily medications easily and never miss a dose.',
-      image: require('../../assets/onboarding1.png'),
+      id: 1,
+      image: require("../../assets/onboarding1.png"),
+      title: "Welcome to MedTrack",
+      subtitle: "Never miss a dose. Track your medication progress and stay healthy.",
     },
     {
-      key: '2',
-      title: 'Reminders That Work',
-      text: 'Get timely alerts to take your medications on schedule.',
-      image: require('../../assets/onboarding2.png'),
+      id: 2,
+      image: require("../../assets/onboarding2.png"),
+      title: "Smart Reminders",
+      subtitle: "Get notified when it's time to take your medication.",
     },
     {
-      key: '3',
-      title: 'Monitor Your Progress',
-      text: 'Stay motivated by tracking your medication streaks and history.',
-      image: require('../../assets/onboarding3.png'),
+      id: 3,
+      image: require("../../assets/onboarding3.png"),
+      title: "Track Progress",
+      subtitle: "Build healthy habits with visual progress tracking.",
     },
   ];
 
   return (
     <View style={styles.container}>
       <Swiper
-        ref={swiperRef}
         loop={false}
-        showsPagination={true}
-        activeDotColor="#1B75D0"
-        dotColor="#C6D8EE"
-        onIndexChanged={(i) => setIndex(i)}
+        showsButtons={false}
+        activeDotColor="#007AFF"
+        paginationStyle={{ bottom: 50 }}
       >
-        {slides.map((item) => (
-          <View style={styles.slide} key={item.key}>
-            <Image source={item.image} style={styles.image} resizeMode="contain" />
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.text}>{item.text}</Text>
+        {slides.map((slide) => (
+          <View key={slide.id} style={styles.slide}>
+            <Image source={slide.image} style={styles.image} resizeMode="contain" />
+            <Text style={styles.title}>{slide.title}</Text>
+            <Text style={styles.subtitle}>{slide.subtitle}</Text>
           </View>
         ))}
       </Swiper>
 
-      <View style={styles.bottomContainer}>
-        {index === slides.length - 1 ? (
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.replace('Login')}
-          >
-            <Text style={styles.buttonText}>Get Started</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.skip}
-            onPress={() => swiperRef.current.scrollBy(1)}
-          >
-            <Text style={styles.skipText}>Next</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.replace("LoginScreen")}
+      >
+        <Text style={styles.buttonText}>Get Started</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  slide: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 25,
-  },
-  image: {
-    width: width * 0.8,
-    height: height * 0.4,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1B75D0',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  text: {
-    fontSize: 15,
-    color: '#444',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  bottomContainer: {
-    paddingHorizontal: 25,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: "#fff", justifyContent: "center" },
+  slide: { alignItems: "center", justifyContent: "center", paddingHorizontal: 20 },
+  image: { width: width * 0.8, height: height * 0.4, marginBottom: 40 },
+  title: { fontSize: 24, fontWeight: "700", color: "#000", textAlign: "center", marginBottom: 10 },
+  subtitle: { fontSize: 16, color: "#555", textAlign: "center", lineHeight: 22 },
   button: {
-    backgroundColor: '#1B75D0',
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
+    backgroundColor: "#007AFF",
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginHorizontal: 40,
+    marginBottom: 60,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  skip: {
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  skipText: {
-    color: '#1B75D0',
-    fontSize: 15,
-    fontWeight: '500',
-  },
+  buttonText: { color: "#fff", fontWeight: "600", textAlign: "center", fontSize: 16 },
 });
