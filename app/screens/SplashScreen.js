@@ -1,20 +1,48 @@
-import React, { useEffect } from "react";
-import { View, Image, ActivityIndicator, StyleSheet } from "react-native";
+import { useEffect } from 'react';
+import { Image, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
-    setTimeout(() => navigation.replace("Onboarding"), 2000);
+    const timer = setTimeout(() => {
+      navigation.replace('Onboarding');
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
-      <Image source={require("../assets/onboarding1.png")} style={styles.logo} />
-      <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 20 }} />
+      <StatusBar barStyle="light-content" backgroundColor="#1B75D0" />
+      <Image
+        source={require('../../assets/logo.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
+      <Text style={styles.title}>MedTrack</Text>
+      <Text style={styles.subtitle}>Smarter medication tracking</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
-  logo: { width: 150, height: 150, resizeMode: "contain" },
+  container: {
+    flex: 1,
+    backgroundColor: '#1B75D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#E8F1FB',
+    marginTop: 5,
+  },
 });

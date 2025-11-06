@@ -1,45 +1,106 @@
+// app/screens/PasscodeScreen.js
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PasscodeScreen({ navigation }) {
-  const [code, setCode] = useState("");
-  const [stored, setStored] = useState(null);
+  const [storedPasscode, setStoredPasscode] = useState(null);
+  const [passcode, setPasscode] = useState("");
+  const [step, setStep] = useState("create"); // create | confirm | unlock
+  const [tempCode, setTempCode] = useState("");
 
   useEffect(() => {
-    (async () => {
-      const s = await AsyncStorage.getItem("passcode");
-      setStored(s);
-    })();
+    const checkExisting = async () => {
+      const saved = await AsyncStorage.getItem("passcode");
+      if (saved) setStep("unlock");
+    };
+    checkExisting();
   }, []);
 
-  const submit = async () => {
-    if (stored) {
-      if (code === stored) navigation.replace("Main");
-      else Alert.alert("Wrong passcode", "Please try again.");
-    } else {
-      // set initial passcode
-      if (code.length === 4) {
-        await AsyncStorage.setItem("passcode", code);
-        Alert.alert("Passcode set", "You can now use this code.");
-        navigation.replace("Main");
-      } else Alert.alert("Enter 4 digits", "Passcode must be 4 digits.");
+  const handlePress = async () => {
+    if (step === "unlock") {
+      if (passcode === storedPasscode || passcode === (await AsyncStorage.getItem("passcode"))) {
+        navigation.replace("MainTabs");
+      } else {
+        Alert.alert("Incorrect", "Try again!");
+        setPasscode("");
+      }
+    } else if (step === "create") {
+      setTempCode(passcode);
+      setPasscode("");
+      setStep("confirm");
+    } else if (step === "confirm") {
+      if (passcode === tempCode) {
+        await AsyncStorage.setItem("passcode", passcode);
+        Alert.alert("Success", "Passcode set successfully!");
+        navigation.replace("MainTabs");
+      } else {
+        Alert.alert("Mismatch", "Passcodes do not match");
+        setPasscode("");
+        setStep("create");
+      }
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Enter 4-digit passcode</Text>
-      <TextInput keyboardType="numeric" value={code} onChangeText={(t) => setCode(t.replace(/[^0-9]/g, ""))} maxLength={4} style={styles.input} />
-      <TouchableOpacity style={styles.button} onPress={submit}><Text style={styles.buttonText}>Continue</Text></TouchableOpacity>
+      <Text style={styles.title}>
+        {step === "unlock"
+          ? "Enter Passcode"
+          : step === "confirm"
+          ? "Confirm Passcode"
+          : "Set a Passcode"}
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        value={passcode}
+        onChangeText={(text) => setPasscode(text.replace(/[^0-9]/g, "").slice(0, 4))}
+        keyboardType="numeric"
+        secureTextEntry
+        maxLength={4}
+      />
+
+      <TouchableOpacity style={styles.button} onPress={handlePress}>
+        <Text style={styles.buttonText}>{step === "unlock" ? "Unlock" : "Continue"}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", alignItems: "center", justifyContent: "center", padding: 20 },
-  title: { fontSize: 20, fontWeight: "700", color: "#003366", marginBottom: 20 },
-  input: { width: 200, textAlign: "center", fontSize: 24, padding: 12, borderWidth: 1, borderColor: "#E0E6ED", borderRadius: 10, marginBottom: 20 },
-  button: { backgroundColor: "#007BFF", padding: 12, borderRadius: 10, width: 200, alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "700" },
+  container: {
+    flex: 1,
+    backgroundColor: "#F5FBFF",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  title: {
+    fontSize: 24,
+    color: "#0A6EBD",
+    fontWeight: "700",
+    marginBottom: 20,
+  },
+  input: {
+    width: "50%",
+    fontSize: 28,
+    textAlign: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "#0A6EBD",
+    marginBottom: 30,
+    letterSpacing: 10,
+    color: "#0A6EBD",
+  },
+  button: {
+    backgroundColor: "#00C48C",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 14,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

@@ -1,61 +1,121 @@
-import { Ionicons } from "@expo/vector-icons";
+// app/screens/ReminderScreen.js
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-export default function ReminderScreen({ navigation }) {
-  const [reminders, setReminders] = useState([]);
+export default function ReminderScreen() {
+  const [medication, setMedication] = useState("");
+  const [time, setTime] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      const s = await AsyncStorage.getItem("reminders");
-      setReminders(s ? JSON.parse(s) : []);
-    };
-    const unsub = navigation.addListener("focus", load);
-    load();
-    return unsub;
-  }, [navigation]);
+    Notifications.requestPermissionsAsync();
+  }, []);
 
-  const remove = async (id) => {
-    const next = reminders.filter((r) => r.id !== id);
-    setReminders(next);
-    await AsyncStorage.setItem("reminders", JSON.stringify(next));
+  const scheduleReminder = async () => {
+    if (!medication) {
+      Alert.alert("Enter medication name");
+      return;
+    }
+
+    const trigger = new Date(time);
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Medication Reminder 💊",
+        body: `Time to take your ${medication}!`,
+      },
+      trigger,
+    });
+
+    const reminders = JSON.parse(await AsyncStorage.getItem("reminders")) || [];
+    reminders.push({ medication, time });
+    await AsyncStorage.setItem("reminders", JSON.stringify(reminders));
+
+    Alert.alert("Saved!", `Reminder set for ${medication}`);
+    setMedication("");
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Reminders</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("AddMedication")}>
-          <Ionicons name="add-circle" size={28} color="#007BFF" />
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.title}>Set Medication Reminder</Text>
 
-      {reminders.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={{ color: "#666" }}>No reminders yet. Add a medication to create reminders.</Text>
-        </View>
-      ) : (
-        <FlatList data={reminders} keyExtractor={(i) => i.id.toString()} renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.med}>{item.name}</Text>
-              <Text style={styles.at}>{item.time}</Text>
-            </View>
-            <TouchableOpacity onPress={() => remove(item.id)}><Ionicons name="trash" size={20} color="#ff4d4f" /></TouchableOpacity>
-          </View>
-        )} />
+      <TextInput
+        placeholder="Medication name"
+        style={styles.input}
+        value={medication}
+        onChangeText={setMedication}
+      />
+
+      <TouchableOpacity style={styles.pickerButton} onPress={() => setShowPicker(true)}>
+        <Text style={styles.pickerText}>
+          {time ? time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Pick Time"}
+        </Text>
+      </TouchableOpacity>
+
+      {showPicker && (
+        <DateTimePicker
+          value={time}
+          mode="time"
+          is24Hour
+          display="spinner"
+          onChange={(event, selected) => {
+            setShowPicker(false);
+            if (selected) setTime(selected);
+          }}
+        />
       )}
+
+      <TouchableOpacity style={styles.button} onPress={scheduleReminder}>
+        <Text style={styles.buttonText}>Save Reminder</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB", padding: 20, paddingTop: 60 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  title: { fontSize: 22, fontWeight: "700", color: "#003366" },
-  empty: { alignItems: "center", marginTop: 40 },
-  card: { backgroundColor: "#fff", padding: 14, borderRadius: 12, marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  med: { fontWeight: "700", color: "#003366" },
-  at: { color: "#666", marginTop: 6 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F5FBFF",
+    padding: 24,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0A6EBD",
+    marginBottom: 20,
+  },
+  input: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    marginBottom: 20,
+  },
+  pickerButton: {
+    backgroundColor: "#E3F2FD",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  pickerText: {
+    color: "#0A6EBD",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  button: {
+    backgroundColor: "#00C48C",
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

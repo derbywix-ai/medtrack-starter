@@ -1,61 +1,170 @@
-// app/screens/AddMedicationScreen.js
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function AddMedicationScreen({ navigation }) {
   const [name, setName] = useState("");
-  const [time, setTime] = useState("");
+  const [dosage, setDosage] = useState("");
+  const [time, setTime] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
 
   const saveMedication = async () => {
-    if (!name || !time) {
-      Alert.alert("Please enter both medication name and time.");
+    if (!name.trim() || !dosage.trim()) {
+      alert("Please fill all fields.");
       return;
     }
 
+    const newMed = {
+      id: Date.now(),
+      name,
+      dosage,
+      time: time.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      taken: false,
+    };
+
     try {
-      const existing = JSON.parse(await AsyncStorage.getItem("medications")) || [];
-      const updated = [...existing, { name, time }];
-      await AsyncStorage.setItem("medications", JSON.stringify(updated));
-      Alert.alert("Medication saved!");
-      navigation.navigate("Home");
+      const existing = await AsyncStorage.getItem("medications");
+      const meds = existing ? JSON.parse(existing) : [];
+      meds.push(newMed);
+      await AsyncStorage.setItem("medications", JSON.stringify(meds));
+      alert("Medication saved ✅");
+      navigation.goBack();
     } catch (error) {
-      Alert.alert("Error saving medication.");
+      console.error("Error saving medication:", error);
     }
+  };
+
+  const onTimeChange = (event, selectedTime) => {
+    if (Platform.OS === "android") setShowPicker(false);
+    if (selectedTime) setTime(selectedTime);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add Medication</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Medication Name"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Time (e.g. 8:00 AM)"
-        value={time}
-        onChangeText={setTime}
-      />
-      <TouchableOpacity style={styles.button} onPress={saveMedication}>
-        <Text style={styles.buttonText}>Save</Text>
+      <Text style={styles.title}>Add New Medication</Text>
+
+      {/* Name Input */}
+      <View style={styles.inputCard}>
+        <Text style={styles.label}>Medication Name</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Paracetamol"
+          value={name}
+          onChangeText={setName}
+          placeholderTextColor="#aaa"
+        />
+      </View>
+
+      {/* Dosage Input */}
+      <View style={styles.inputCard}>
+        <Text style={styles.label}>Dosage</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 500mg"
+          value={dosage}
+          onChangeText={setDosage}
+          placeholderTextColor="#aaa"
+        />
+      </View>
+
+      {/* Time Picker */}
+      <View style={styles.inputCard}>
+        <Text style={styles.label}>Time</Text>
+        <TouchableOpacity
+          style={styles.timePicker}
+          onPress={() => setShowPicker(true)}
+        >
+          <Ionicons name="time-outline" size={22} color="#1B75D0" />
+          <Text style={styles.timeText}>
+            {time.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {showPicker && (
+        <DateTimePicker
+          value={time}
+          mode="time"
+          display="spinner"
+          onChange={onTimeChange}
+        />
+      )}
+
+      {/* Save Button */}
+      <TouchableOpacity style={styles.saveButton} onPress={saveMedication}>
+        <Text style={styles.saveText}>Save Medication</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 25, justifyContent: "center" },
-  title: { fontSize: 22, fontWeight: "bold", color: "#003366", marginBottom: 20, textAlign: "center" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 15,
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FBFF",
+    padding: 25,
+    paddingTop: 70,
   },
-  button: { backgroundColor: "#007BFF", padding: 15, borderRadius: 10, alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "bold" },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1B75D0",
+    marginBottom: 25,
+  },
+  inputCard: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 18,
+    marginBottom: 18,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  label: {
+    color: "#1B75D0",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  input: {
+    fontSize: 16,
+    color: "#333",
+  },
+  timePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  timeText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  saveButton: {
+    marginTop: 40,
+    backgroundColor: "#1B75D0",
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: "center",
+  },
+  saveText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "600",
+  },
 });
