@@ -1,11 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const BASE_URL = 'http://localhost:5000';
+
+// Base URL
+const BASE_URL = 'http://localhost:5000/api';
 
 // Auth Service
 export const authService = {
   // Signup
   signup: async (fullName, email, phone, password) => {
     try {
+      console.log('Signup attempt:', { fullName, email, phone });
+      
       const response = await fetch(`${BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
@@ -20,9 +24,11 @@ export const authService = {
       });
 
       const data = await response.json();
+      console.log('Signup response status:', response.status);
+      console.log('Signup response data:', JSON.stringify(data, null, 2));
+      console.log('Error message from backend:', data.message);
 
       if (data.success) {
-        // Save token to AsyncStorage
         if (data.token) {
           await AsyncStorage.setItem('authToken', data.token);
         }
@@ -31,6 +37,7 @@ export const authService = {
         return { success: false, message: data.message || 'Signup failed' };
       }
     } catch (error) {
+      console.error('Signup error:', error);
       return { success: false, message: error.message };
     }
   },
@@ -38,6 +45,8 @@ export const authService = {
   // Signin
   signin: async (email, password) => {
     try {
+      console.log('Signin attempt:', { email });
+      
       const response = await fetch(`${BASE_URL}/auth/signin`, {
         method: 'POST',
         headers: {
@@ -50,9 +59,11 @@ export const authService = {
       });
 
       const data = await response.json();
+      console.log('Signin response status:', response.status);
+      console.log('Signin response data:', JSON.stringify(data, null, 2));
+      console.log('Error message from backend:', data.message);
 
       if (data.success) {
-        // Save token to AsyncStorage
         if (data.token) {
           await AsyncStorage.setItem('authToken', data.token);
         }
@@ -61,6 +72,7 @@ export const authService = {
         return { success: false, message: data.message || 'Login failed' };
       }
     } catch (error) {
+      console.error('Signin error:', error);
       return { success: false, message: error.message };
     }
   },
@@ -81,7 +93,6 @@ export const authService = {
       const data = await response.json();
 
       if (data.success) {
-        // Remove token from AsyncStorage
         await AsyncStorage.removeItem('authToken');
         return { success: true };
       } else {
@@ -123,6 +134,13 @@ export const medicationService = {
   addMedication: async (medicationData) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        console.error('❌ No token found! User may not be logged in.');
+        return { success: false, message: 'Unauthorized: No token found' };
+      }
+
+      console.log('📤 Adding medication with token:', token.substring(0, 20) + '...');
 
       const response = await fetch(`${BASE_URL}/reminder/add`, {
         method: 'POST',
@@ -134,8 +152,10 @@ export const medicationService = {
       });
 
       const data = await response.json();
+      console.log('📥 Add medication response:', data);
       return data;
     } catch (error) {
+      console.error('❌ Add medication error:', error);
       return { success: false, message: error.message };
     }
   },
@@ -173,7 +193,7 @@ export const medicationService = {
         },
         body: JSON.stringify({
           reminderId,
-          status, // 'Taken', 'Remind Later', 'Skipped', 'Pending'
+          status,
         }),
       });
 
@@ -185,18 +205,16 @@ export const medicationService = {
   },
 };
 
-// Helper to get current auth token
+// Helper functions
 export const getAuthToken = async () => {
   return await AsyncStorage.getItem('authToken');
 };
 
-// Helper to check if user is logged in
 export const isLoggedIn = async () => {
   const token = await AsyncStorage.getItem('authToken');
   return !!token;
 };
 
-// Helper to logout
 export const logout = async () => {
   await AsyncStorage.removeItem('authToken');
 };

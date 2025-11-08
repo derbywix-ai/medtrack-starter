@@ -1,171 +1,239 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { medicationService } from '../services/api';
 
-export default function HomeScreen() {
-  const router = useRouter();
-  const [userName, setUserName] = useState('User');
+export default function HomeScreen({ navigation }) {
+  const [user, setUser] = useState(null);
   const [medications, setMedications] = useState([]);
-  const [currentStreak, setCurrentStreak] = useState(0);
+  const [todayReminders, setTodayReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadDashboard();
   }, []);
 
-  const loadData = async () => {
-    const name = await AsyncStorage.getItem('userName');
-    if (name) setUserName(name);
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
 
-    const meds = await AsyncStorage.getItem('medications');
-    if (meds) setMedications(JSON.parse(meds));
+      // Get user info
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
 
-    const streak = await AsyncStorage.getItem('streak');
-    if (streak) setCurrentStreak(parseInt(streak));
+      // Fetch medications
+      const result = await medicationService.getMedications();
+      if (result.success) {
+        setMedications(result.data || []);
+        
+        // Filter today's reminders
+        const today = new Date();
+        const todayTime = today.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+
+        const todayMeds = (result.data || []).filter(med => {
+          return med.schedule && med.schedule.length > 0;
+        });
+
+        setTodayReminders(todayMeds);
+      }
+    } catch (error) {
+      console.error('❌ Load dashboard error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const formatTime = (time) => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
   };
+
+  const handleQuickMark = async (medicationId, time, status) => {
+    try {
+      const result = await medicationService.updateReminderStatus(medicationId, time, status);
+      
+      if (result.success) {
+        Alert.alert('Success', `Marked as ${status}`);
+        loadDashboard();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to update');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, {userName}!</Text>
-          <Text style={styles.date}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push('/profile')}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Greeting */}
+        <View style={styles.greetingSection}>
+          <View>
+            <Text style={styles.greetingText}>
+              Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋
+            </Text>
+            <Text style={styles.subtitleText}>
+              {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
           <View style={styles.avatar}>
-            <Ionicons name="person" size={28} color="#5B67CA" />
+            <Ionicons name="person" size={32} color="#2563EB" />
           </View>
-        </TouchableOpacity>
-      </View>
+        </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Streak Card */}
-        <TouchableOpacity 
-          style={styles.streakCard}
-          onPress={() => router.push('/streak')}
-        >
-          <View style={styles.streakContent}>
-            <View>
-              <Text style={styles.streakLabel}>Current Streak</Text>
-              <View style={styles.streakRow}>
-                <Text style={styles.streakNumber}>{currentStreak}</Text>
-                <Text style={styles.streakDays}>days</Text>
-              </View>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="medical" size={24} color="#2563EB" />
             </View>
-            <View style={styles.fireIcon}>
-              <Text style={styles.fireEmoji}>🔥</Text>
-            </View>
+            <Text style={styles.statValue}>{medications.length}</Text>
+            <Text style={styles.statLabel}>Medications</Text>
           </View>
-        </TouchableOpacity>
 
-        {/* Today's Schedule */}
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="notifications" size={24} color="#10B981" />
+            </View>
+            <Text style={styles.statValue}>{todayReminders.length}</Text>
+            <Text style={styles.statLabel}>Today</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <View style={styles.statIconContainer}>
+              <Ionicons name="flame" size={24} color="#F59E0B" />
+            </View>
+            <Text style={styles.statValue}>7</Text>
+            <Text style={styles.statLabel}>Day Streak</Text>
+          </View>
+        </View>
+
+        {/* Today's Medications */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Schedule</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See all</Text>
+            <Text style={styles.sectionTitle}>Today's Medications</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Reminder')}>
+              <Text style={styles.viewAllLink}>View All</Text>
             </TouchableOpacity>
           </View>
 
-          {medications.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No medications scheduled</Text>
-              <Text style={styles.emptySubtext}>Add your first medication to get started</Text>
+          {todayReminders.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="checkmark-circle" size={48} color="#10B981" />
+              <Text style={styles.emptyTitle}>All caught up!</Text>
+              <Text style={styles.emptyText}>No medications scheduled for today</Text>
             </View>
           ) : (
-            medications.map((med, index) => (
-              <TouchableOpacity 
-                key={index}
-                style={styles.medCard}
-                onPress={() => router.push(`/medication-details?id=${index}`)}
-              >
-                <View style={[styles.medIcon, { backgroundColor: med.color || '#E8EBFF' }]}>
-                  <Ionicons name="medkit" size={24} color="#5B67CA" />
-                </View>
-                <View style={styles.medInfo}>
-                  <Text style={styles.medName}>{med.name}</Text>
-                  <Text style={styles.medDose}>{med.dosage} • {formatTime(med.time)}</Text>
-                </View>
-                <View style={[styles.statusBadge, med.taken && styles.statusBadgeTaken]}>
-                  <Text style={[styles.statusText, med.taken && styles.statusTextTaken]}>
-                    {med.taken ? 'Taken' : 'Pending'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
+            <View style={styles.medicationsListContainer}>
+              {todayReminders.slice(0, 3).map((med, index) => (
+                <TouchableOpacity
+                  key={med._id || index}
+                  style={styles.medicationListItem}
+                  onPress={() => navigation.navigate('MedicationDetails', { medication: med })}
+                >
+                  <View style={styles.medicationListContent}>
+                    <Text style={styles.medicationListName}>{med.name}</Text>
+                    <Text style={styles.medicationListDosage}>{med.dosage}</Text>
+                    <View style={styles.timesRow}>
+                      {med.schedule?.slice(0, 2).map((time, idx) => (
+                        <Text key={idx} style={styles.timeTag}>
+                          {time}
+                        </Text>
+                      ))}
+                      {med.schedule?.length > 2 && (
+                        <Text style={styles.timeTag}>
+                          +{med.schedule.length - 2}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.quickMarkButton}
+                    onPress={() => handleQuickMark(med._id, med.schedule[0], 'Taken')}
+                  >
+                    <Ionicons name="checkmark" size={20} color="#FFF" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
 
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Ionicons name="checkmark-circle" size={32} color="#10B981" />
-            <Text style={styles.statNumber}>
-              {medications.filter(m => m.taken).length}
-            </Text>
-            <Text style={styles.statLabel}>Taken Today</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Ionicons name="time-outline" size={32} color="#F59E0B" />
-            <Text style={styles.statNumber}>
-              {medications.filter(m => !m.taken).length}
-            </Text>
-            <Text style={styles.statLabel}>Pending</Text>
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('AddMedication')}
+            >
+              <Ionicons name="add-circle" size={32} color="#2563EB" />
+              <Text style={styles.quickActionText}>Add Medication</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('Reminder')}
+            >
+              <Ionicons name="list" size={32} color="#10B981" />
+              <Text style={styles.quickActionText}>View Reminders</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('Streak')}
+            >
+              <Ionicons name="flame" size={32} color="#F59E0B" />
+              <Text style={styles.quickActionText}>View Streaks</Text>
+            </TouchableOpacity>
           </View>
         </View>
+
+        <View style={styles.spacing} />
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="home" size={24} color="#5B67CA" />
-          <Text style={[styles.navText, styles.navTextActive]}>Home</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/reminder')}
-        >
-          <Ionicons name="notifications-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.navText}>Reminders</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => router.push('/add-medication')}
-        >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/streak')}
-        >
-          <Ionicons name="flame-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.navText}>Streak</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => router.push('/profile')}
-        >
-          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -174,221 +242,194 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  header: {
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  greetingSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
-  greeting: {
+  greetingText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E1E1E',
+    color: '#111827',
   },
-  date: {
+  subtitleText: {
     fontSize: 14,
     color: '#6B7280',
     marginTop: 4,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E8EBFF',
-    alignItems: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
-  },
-  streakCard: {
-    backgroundColor: '#5B67CA',
-    marginHorizontal: 24,
-    marginVertical: 20,
-    borderRadius: 16,
-    padding: 20,
-  },
-  streakContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  streakLabel: {
-    color: '#E8EBFF',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  streakRow: {
+  statsContainer: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
   },
-  streakNumber: {
-    fontSize: 36,
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#111827',
   },
-  streakDays: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  fireIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fireEmoji: {
-    fontSize: 32,
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
   },
   section: {
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E1E1E',
-  },
-  seeAll: {
-    fontSize: 14,
-    color: '#5B67CA',
-    fontWeight: '600',
-  },
-  emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  medCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 12,
   },
-  medIcon: {
-    width: 48,
-    height: 48,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  viewAllLink: {
+    fontSize: 13,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  emptyCard: {
+    backgroundColor: '#F0FDF4',
     borderRadius: 12,
+    padding: 24,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
   },
-  medInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  medName: {
+  emptyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E1E1E',
-    marginBottom: 4,
+    color: '#15803D',
+    marginTop: 12,
   },
-  medDose: {
-    fontSize: 14,
+  emptyText: {
+    fontSize: 13,
     color: '#6B7280',
+    marginTop: 4,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#FEF3C7',
-  },
-  statusBadgeTaken: {
-    backgroundColor: '#D1FAE5',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-  statusTextTaken: {
-    color: '#10B981',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
+  medicationsListContainer: {
     gap: 12,
-    marginBottom: 100,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+  medicationListItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
   },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E1E1E',
+  medicationListContent: {
+    flex: 1,
+  },
+  medicationListName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  medicationListDosage: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  timesRow: {
+    flexDirection: 'row',
+    gap: 6,
     marginTop: 8,
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
+  timeTag: {
+    fontSize: 11,
+    backgroundColor: '#DBEAFE',
+    color: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontWeight: '500',
   },
-  bottomNav: {
+  quickMarkButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    gap: 12,
   },
-  navItem: {
+  quickActionCard: {
     flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  navText: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  navTextActive: {
-    color: '#5B67CA',
+  quickActionText: {
+    fontSize: 11,
     fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
   },
-  addButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#5B67CA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -28,
-    shadowColor: '#5B67CA',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  spacing: {
+    height: 20,
   },
 });

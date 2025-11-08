@@ -1,229 +1,204 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { medicationService } from '../services/api';
 
-export default function MedicationDetailsScreen() {
-  const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const [medication, setMedication] = useState(null);
-  const [history, setHistory] = useState([]);
+export default function MedicationDetailScreen({ navigation, route }) {
+  const { medication } = route.params || {};
+  const [loading, setLoading] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(null);
 
-  useEffect(() => {
-    loadMedication();
-  }, []);
+  const handleMarkStatus = async (time, status) => {
+    setLoading(true);
+    try {
+      const result = await medicationService.updateReminderStatus(
+        medication._id,
+        time,
+        status
+      );
 
-  const loadMedication = async () => {
-    const medsStr = await AsyncStorage.getItem('medications');
-    if (medsStr) {
-      const meds = JSON.parse(medsStr);
-      const med = meds[parseInt(id)];
-      setMedication(med);
-      
-      // Simulate history data
-      const historyData = [
-        { date: 'Today, 9:00 AM', taken: true, time: '9:05 AM' },
-        { date: 'Yesterday, 9:00 AM', taken: true, time: '9:02 AM' },
-        { date: '2 days ago, 9:00 AM', taken: false, time: 'Missed' },
-        { date: '3 days ago, 9:00 AM', taken: true, time: '9:10 AM' },
-      ];
-      setHistory(historyData);
+      if (result.success) {
+        setSelectedStatus(`${time} - ${status}`);
+        Alert.alert('Success', `Marked as ${status}!`);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to update status');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleMarkAsTaken = async () => {
-    if (!medication) return;
-    
-    const medsStr = await AsyncStorage.getItem('medications');
-    if (medsStr) {
-      const meds = JSON.parse(medsStr);
-      meds[parseInt(id)].taken = true;
-      await AsyncStorage.setItem('medications', JSON.stringify(meds));
-      
-      // Update streak
-      const streak = await AsyncStorage.getItem('streak');
-      const currentStreak = streak ? parseInt(streak) : 0;
-      await AsyncStorage.setItem('streak', (currentStreak + 1).toString());
-      
-      setMedication({ ...medication, taken: true });
-      Alert.alert('Success', 'Medication marked as taken!');
-    }
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      'Delete Medication',
-      'Are you sure you want to delete this medication?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: async () => {
-            const medsStr = await AsyncStorage.getItem('medications');
-            if (medsStr) {
-              const meds = JSON.parse(medsStr);
-              meds.splice(parseInt(id), 1);
-              await AsyncStorage.setItem('medications', JSON.stringify(meds));
-              router.back();
-            }
-          }
-        }
-      ]
-    );
   };
 
   if (!medication) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#1E1E1E" />
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={64} color="#DC2626" />
+          <Text style={styles.errorText}>Medication not found</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  const formatTime = (time) => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-  };
-
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#1E1E1E" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={24} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView style={styles.scrollView}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color="#2563EB" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Medication Details</Text>
+          <View style={{ width: 28 }} />
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Medication Info */}
-        <View style={styles.medHeader}>
-          <View style={[styles.medIcon, { backgroundColor: medication.color || '#E8EBFF' }]}>
-            <Ionicons name="medkit" size={48} color="#5B67CA" />
+        {/* Medication Info Card */}
+        <View style={styles.infoCard}>
+          <View style={styles.medicationIcon}>
+            <Ionicons name="medical" size={48} color="#2563EB" />
           </View>
-          <Text style={styles.medName}>{medication.name}</Text>
-          <Text style={styles.medDosage}>{medication.dosage}</Text>
+          <Text style={styles.medicationName}>{medication.name}</Text>
+          <Text style={styles.medicationDosage}>{medication.dosage}</Text>
           
-          <View style={[styles.statusBadge, medication.taken && styles.statusBadgeTaken]}>
-            <Text style={[styles.statusText, medication.taken && styles.statusTextTaken]}>
-              {medication.taken ? 'Taken' : 'Pending'}
-            </Text>
+          {/* Status Badge */}
+          <View style={styles.statusBadgeContainer}>
+            <View style={styles.statusBadge}>
+              <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+              <Text style={styles.statusBadgeText}>Active</Text>
+            </View>
           </View>
         </View>
 
-        {/* Action Button */}
-        {!medication.taken && (
-          <TouchableOpacity style={styles.takeButton} onPress={handleMarkAsTaken}>
-            <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-            <Text style={styles.takeButtonText}>Mark as Taken</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Details */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.sectionTitle}>Details</Text>
-          
-          <View style={styles.detailCard}>
-            <View style={styles.detailRow}>
-              <View style={styles.detailLeft}>
-                <Ionicons name="time-outline" size={20} color="#6B7280" />
-                <Text style={styles.detailLabel}>Time</Text>
-              </View>
-              <Text style={styles.detailValue}>{formatTime(medication.time)}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailLeft}>
-                <Ionicons name="repeat-outline" size={20} color="#6B7280" />
-                <Text style={styles.detailLabel}>Frequency</Text>
-              </View>
-              <Text style={styles.detailValue}>{medication.frequency}</Text>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailLeft}>
-                <Ionicons name="calculator-outline" size={20} color="#6B7280" />
-                <Text style={styles.detailLabel}>Dosage</Text>
-              </View>
-              <Text style={styles.detailValue}>{medication.dosage}</Text>
-            </View>
-
-            {medication.notes && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.notesRow}>
-                  <View style={styles.detailLeft}>
-                    <Ionicons name="document-text-outline" size={20} color="#6B7280" />
-                    <Text style={styles.detailLabel}>Notes</Text>
+        {/* Schedule Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Schedule</Text>
+          <View style={styles.scheduleContainer}>
+            {medication.schedule && medication.schedule.length > 0 ? (
+              medication.schedule.map((time, index) => (
+                <View key={index} style={styles.scheduleItem}>
+                  <View style={styles.scheduleTimeContainer}>
+                    <Ionicons name="time" size={24} color="#2563EB" />
+                    <Text style={styles.scheduleTime}>{time}</Text>
                   </View>
-                  <Text style={styles.notesText}>{medication.notes}</Text>
+                  <View style={styles.scheduleActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.takenButton]}
+                      onPress={() => handleMarkStatus(time, 'Taken')}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark" size={16} color="#FFF" />
+                          <Text style={styles.actionButtonText}>Taken</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.skippedButton]}
+                      onPress={() => handleMarkStatus(time, 'Skipped')}
+                      disabled={loading}
+                    >
+                      <Ionicons name="close" size={16} color="#FFF" />
+                      <Text style={styles.actionButtonText}>Skip</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </>
+              ))
+            ) : (
+              <Text style={styles.noScheduleText}>No schedule set</Text>
             )}
           </View>
         </View>
 
-        {/* History */}
-        <View style={styles.historySection}>
-          <Text style={styles.sectionTitle}>History</Text>
-          
-          {history.map((item, index) => (
-            <View key={index} style={styles.historyCard}>
-              <View style={[
-                styles.historyIcon,
-                item.taken ? styles.historyIconTaken : styles.historyIconMissed
-              ]}>
-                <Ionicons 
-                  name={item.taken ? "checkmark" : "close"} 
-                  size={16} 
-                  color={item.taken ? "#10B981" : "#EF4444"} 
-                />
-              </View>
-              <View style={styles.historyInfo}>
-                <Text style={styles.historyDate}>{item.date}</Text>
-                <Text style={[
-                  styles.historyStatus,
-                  item.taken ? styles.historyStatusTaken : styles.historyStatusMissed
-                ]}>
-                  {item.time}
+        {/* Reminders Status */}
+        {medication.reminders && medication.reminders.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reminders Status</Text>
+            <View style={styles.remindersContainer}>
+              {medication.reminders.map((reminder, index) => (
+                <View key={index} style={styles.reminderStatusItem}>
+                  <View style={styles.reminderInfo}>
+                    <Text style={styles.reminderTime}>{reminder.time}</Text>
+                    <Text style={styles.reminderDate}>
+                      Updated: {new Date(reminder.updatedAt || Date.now()).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={[
+                    styles.statusPill,
+                    reminder.status === 'Taken' && styles.statusTaken,
+                    reminder.status === 'Pending' && styles.statusPending,
+                    reminder.status === 'Skipped' && styles.statusSkipped,
+                  ]}>
+                    <Text style={styles.statusPillText}>{reminder.status}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Medical Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Medical Information</Text>
+          <View style={styles.medicalCard}>
+            <View style={styles.medicalItem}>
+              <Ionicons name="warning" size={20} color="#F59E0B" />
+              <View style={styles.medicalContent}>
+                <Text style={styles.medicalLabel}>Side Effects</Text>
+                <Text style={styles.medicalValue}>
+                  Please consult your doctor for detailed information
                 </Text>
               </View>
             </View>
-          ))}
+            <View style={styles.divider} />
+            <View style={styles.medicalItem}>
+              <Ionicons name="help-circle" size={20} color="#2563EB" />
+              <View style={styles.medicalContent}>
+                <Text style={styles.medicalLabel}>Drug Interactions</Text>
+                <Text style={styles.medicalValue}>
+                  Always inform your doctor about other medications
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.actionsSection}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="pencil-outline" size={20} color="#5B67CA" />
-            <Text style={styles.actionText}>Edit Medication</Text>
+        {/* Action Buttons */}
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.editButton}>
+            <Ionicons name="pencil" size={20} color="#FFF" />
+            <Text style={styles.editButtonText}>Edit Medication</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="share-outline" size={20} color="#5B67CA" />
-            <Text style={styles.actionText}>Share Details</Text>
+          <TouchableOpacity style={styles.deleteButton}>
+            <Ionicons name="trash" size={20} color="#FFF" />
+            <Text style={styles.deleteButtonText}>Delete Medication</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.spacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -232,192 +207,259 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  scrollView: {
+    flex: 1,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#DC2626',
+    marginTop: 12,
+    fontWeight: '600',
+  },
+  backButton: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#FFF',
+    fontWeight: '600',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
   },
-  loadingContainer: {
-    flex: 1,
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  infoCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
+  },
+  medicationIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  medHeader: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
     alignItems: 'center',
     marginBottom: 16,
   },
-  medIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  medName: {
+  medicationName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#1E1E1E',
-    marginBottom: 8,
+    color: '#111827',
+    textAlign: 'center',
   },
-  medDosage: {
-    fontSize: 16,
+  medicationDosage: {
+    fontSize: 14,
     color: '#6B7280',
-    marginBottom: 16,
+    marginTop: 8,
+  },
+  statusBadgeContainer: {
+    marginTop: 16,
   },
   statusBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#FEF3C7',
-  },
-  statusBadgeTaken: {
-    backgroundColor: '#D1FAE5',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#F59E0B',
-  },
-  statusTextTaken: {
-    color: '#10B981',
-  },
-  takeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#5B67CA',
-    marginHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 24,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 20,
   },
-  takeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  statusBadgeText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: '#15803D',
   },
-  detailsSection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+  section: {
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1E1E',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
     marginBottom: 12,
   },
-  detailCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+  scheduleContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    gap: 12,
   },
-  detailRow: {
+  scheduleItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  detailLeft: {
+  scheduleTimeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  detailLabel: {
-    fontSize: 16,
-    color: '#374151',
-  },
-  detailValue: {
+  scheduleTime: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E1E1E',
+    color: '#111827',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  notesRow: {
-    paddingTop: 12,
-  },
-  notesText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  historySection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  historyCard: {
+  scheduleActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  historyIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  historyIconTaken: {
-    backgroundColor: '#D1FAE5',
-  },
-  historyIconMissed: {
-    backgroundColor: '#FEE2E2',
-  },
-  historyInfo: {
-    flex: 1,
-  },
-  historyDate: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 4,
-  },
-  historyStatus: {
-    fontSize: 12,
-  },
-  historyStatusTaken: {
-    color: '#10B981',
-  },
-  historyStatusMissed: {
-    color: '#EF4444',
-  },
-  actionsSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    gap: 12,
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  actionText: {
+  takenButton: {
+    backgroundColor: '#10B981',
+  },
+  skippedButton: {
+    backgroundColor: '#EF4444',
+  },
+  actionButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  noScheduleText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  remindersContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    gap: 12,
+  },
+  reminderStatusItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  reminderInfo: {
+    flex: 1,
+  },
+  reminderTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  reminderDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  statusTaken: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusSkipped: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  medicalCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+  },
+  medicalItem: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  medicalContent: {
+    flex: 1,
+  },
+  medicalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  medicalValue: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 8,
+    marginBottom: 12,
+  },
+  editButtonText: {
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#5B67CA',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  deleteButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  spacing: {
+    height: 20,
   },
 });

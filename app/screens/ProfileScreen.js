@@ -1,346 +1,346 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { authService } from '../services/api';
 
-export default function ProfileScreen() {
-  const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [gender, setGender] = useState('male');
-  const [selectedAvatar, setSelectedAvatar] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
+export default function ProfileScreen({ navigation }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    loadProfile();
+    loadUserProfile();
   }, []);
 
-  const loadProfile = async () => {
-    const userName = await AsyncStorage.getItem('userName') || 'User';
-    const userEmail = await AsyncStorage.getItem('userEmail') || 'user@example.com';
-    const userGender = await AsyncStorage.getItem('gender') || 'male';
-    const avatar = await AsyncStorage.getItem('avatar') || '0';
-    
-    setName(userName);
-    setEmail(userEmail);
-    setGender(userGender);
-    setSelectedAvatar(parseInt(avatar));
+  const loadUserProfile = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = async () => {
-    await AsyncStorage.setItem('userName', name);
-    await AsyncStorage.setItem('userEmail', email);
-    await AsyncStorage.setItem('gender', gender);
-    await AsyncStorage.setItem('avatar', selectedAvatar.toString());
-    setIsEditing(false);
+  const handleSignout = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          onPress: async () => {
+            setSigningOut(true);
+            try {
+              const result = await authService.signout();
+              
+              // Clear local data
+              await AsyncStorage.removeItem('authToken');
+              await AsyncStorage.removeItem('user');
+              await AsyncStorage.removeItem('rememberedEmail');
+
+              if (result.success) {
+                Alert.alert('Success', 'You have been signed out');
+                // Navigation will automatically show AuthStack
+              } else {
+                Alert.alert('Error', result.message || 'Failed to sign out');
+              }
+            } catch (error) {
+              console.error('Signout error:', error);
+              Alert.alert('Error', error.message || 'An error occurred');
+            } finally {
+              setSigningOut(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
-  const maleAvatars = ['👨', '👨‍💼', '👨‍🔬', '👨‍⚕️'];
-  const femaleAvatars = ['👩', '👩‍💼', '👩‍🔬', '👩‍⚕️'];
-  const avatars = gender === 'male' ? maleAvatars : femaleAvatars;
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#1E1E1E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => isEditing ? handleSave() : setIsEditing(true)}>
-          <Text style={styles.editText}>{isEditing ? 'Save' : 'Edit'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <View style={styles.currentAvatar}>
-            <Text style={styles.avatarEmoji}>{avatars[selectedAvatar]}</Text>
-          </View>
-          {isEditing && (
-            <Text style={styles.changeAvatarText}>Select your avatar</Text>
-          )}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Profile</Text>
         </View>
 
-        {/* Gender Selection */}
-        {isEditing && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Gender</Text>
-            <View style={styles.genderContainer}>
-              <TouchableOpacity
-                style={[styles.genderButton, gender === 'male' && styles.genderButtonActive]}
-                onPress={() => setGender('male')}
-              >
-                <Ionicons name="male" size={24} color={gender === 'male' ? '#FFFFFF' : '#6B7280'} />
-                <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>
-                  Male
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.genderButton, gender === 'female' && styles.genderButtonActive]}
-                onPress={() => setGender('female')}
-              >
-                <Ionicons name="female" size={24} color={gender === 'female' ? '#FFFFFF' : '#6B7280'} />
-                <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>
-                  Female
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* User Card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle" size={80} color="#2563EB" />
           </View>
-        )}
-
-        {/* Avatar Grid */}
-        {isEditing && (
-          <View style={styles.section}>
-            <Text style={styles.label}>Choose Avatar</Text>
-            <View style={styles.avatarGrid}>
-              {avatars.map((avatar, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.avatarOption,
-                    selectedAvatar === index && styles.avatarOptionActive
-                  ]}
-                  onPress={() => setSelectedAvatar(index)}
-                >
-                  <Text style={styles.avatarOptionEmoji}>{avatar}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Personal Info */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Name</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor="#9CA3AF"
+          <Text style={styles.userName}>{user?.name || 'User'}</Text>
+          <Text style={styles.userEmail}>{user?.email || 'No email'}</Text>
+          <View style={styles.verificationBadge}>
+            <Ionicons 
+              name={user?.verified ? "checkmark-circle" : "alert-circle"} 
+              size={16} 
+              color={user?.verified ? "#10B981" : "#F59E0B"} 
             />
-          ) : (
-            <Text style={styles.value}>{name}</Text>
-          )}
+            <Text style={[
+              styles.verificationText,
+              { color: user?.verified ? "#10B981" : "#F59E0B" }
+            ]}>
+              {user?.verified ? "Verified" : "Not Verified"}
+            </Text>
+          </View>
         </View>
 
+        {/* Settings Section */}
         <View style={styles.section}>
-          <Text style={styles.label}>Email</Text>
-          {isEditing ? (
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your email"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          ) : (
-            <Text style={styles.value}>{email}</Text>
-          )}
-        </View>
-
-        {/* Settings */}
-        <View style={styles.settingsSection}>
           <Text style={styles.sectionTitle}>Settings</Text>
           
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={24} color="#6B7280" />
-              <Text style={styles.settingText}>Notifications</Text>
+              <Ionicons name="notifications" size={24} color="#2563EB" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Notifications</Text>
+                <Text style={styles.settingSubtitle}>Manage reminder notifications</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <Ionicons name="lock-closed-outline" size={24} color="#6B7280" />
-              <Text style={styles.settingText}>Change PIN</Text>
+              <Ionicons name="time" size={24} color="#10B981" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Timezone</Text>
+                <Text style={styles.settingSubtitle}>GMT+1 (Lagos)</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <Ionicons name="help-circle-outline" size={24} color="#6B7280" />
-              <Text style={styles.settingText}>Help & Support</Text>
+              <Ionicons name="lock-closed" size={24} color="#F59E0B" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Change Password</Text>
+                <Text style={styles.settingSubtitle}>Update your password</Text>
+              </View>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.settingItem, styles.logoutItem]}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="log-out-outline" size={24} color="#EF4444" />
-              <Text style={[styles.settingText, styles.logoutText]}>Logout</Text>
-            </View>
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
           </TouchableOpacity>
         </View>
+
+        {/* About Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>About</Text>
+          
+          <TouchableOpacity style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="information-circle" size={24} color="#8B5CF6" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>About MedTrack</Text>
+                <Text style={styles.settingSubtitle}>Version 1.0.0</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="document-text" size={24} color="#06B6D4" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Terms of Service</Text>
+                <Text style={styles.settingSubtitle}>Read our terms</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="shield-checkmark" size={24} color="#059669" />
+              <View style={styles.settingContent}>
+                <Text style={styles.settingLabel}>Privacy Policy</Text>
+                <Text style={styles.settingSubtitle}>Your privacy matters</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#D1D5DB" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign Out Button */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.signoutButton}
+            onPress={handleSignout}
+            disabled={signingOut}
+          >
+            {signingOut ? (
+              <>
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.signoutButtonText}>Signing out...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="log-out" size={20} color="#FFF" />
+                <Text style={styles.signoutButtonText}>Sign Out</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.spacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F9FAFB',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E1E1E',
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#111827',
   },
-  editText: {
-    fontSize: 16,
-    color: '#5B67CA',
-    fontWeight: '600',
-  },
-  content: {
-    flex: 1,
-  },
-  avatarSection: {
+  userCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
-    paddingVertical: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  currentAvatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#E8EBFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+  avatarContainer: {
+    marginBottom: 16,
   },
-  avatarEmoji: {
-    fontSize: 64,
+  userName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
   },
-  changeAvatarText: {
+  userEmail: {
     fontSize: 14,
     color: '#6B7280',
+    marginTop: 4,
+  },
+  verificationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    gap: 6,
+  },
+  verificationText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   section: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  value: {
-    fontSize: 16,
-    color: '#1E1E1E',
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 12,
-  },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1E1E1E',
-  },
-  genderContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  genderButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  genderButtonActive: {
-    backgroundColor: '#5B67CA',
-    borderColor: '#5B67CA',
-  },
-  genderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  genderTextActive: {
-    color: '#FFFFFF',
-  },
-  avatarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  avatarOption: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOptionActive: {
-    borderColor: '#5B67CA',
-    backgroundColor: '#E8EBFF',
-  },
-  avatarOptionEmoji: {
-    fontSize: 36,
-  },
-  settingsSection: {
-    paddingHorizontal: 24,
-    marginTop: 12,
-    paddingBottom: 100,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1E1E',
-    marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F3F4F6',
   },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
-  settingText: {
+  settingContent: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  settingSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  signoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DC2626',
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 12,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  signoutButtonText: {
+    color: '#FFF',
     fontSize: 16,
-    color: '#1E1E1E',
+    fontWeight: '600',
   },
-  logoutItem: {
-    borderBottomWidth: 0,
-  },
-  logoutText: {
-    color: '#EF4444',
+  spacing: {
+    height: 20,
   },
 });

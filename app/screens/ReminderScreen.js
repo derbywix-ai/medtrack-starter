@@ -1,154 +1,182 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  StatusBar,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { medicationService } from '../services/api';
 
-export default function ReminderScreen() {
-  const router = useRouter();
+export default function ReminderScreen({ navigation }) {
   const [medications, setMedications] = useState([]);
-  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadData();
+    fetchMedications();
   }, []);
 
-  const loadData = async () => {
-    const meds = await AsyncStorage.getItem('medications');
-    if (meds) setMedications(JSON.parse(meds));
-    
-    const enabled = await AsyncStorage.getItem('remindersEnabled');
-    if (enabled !== null) setRemindersEnabled(enabled === 'true');
+  const fetchMedications = async () => {
+    try {
+      setLoading(true);
+      console.log('📥 Fetching medications...');
+
+      const result = await medicationService.getMedications();
+      console.log('📋 Medications response:', result);
+
+      if (result.success) {
+        setMedications(result.data || []);
+        console.log('✅ Medications loaded:', result.data?.length || 0);
+      } else {
+        Alert.alert('Error', result.message || 'Failed to fetch medications');
+      }
+    } catch (error) {
+      console.error('❌ Fetch medications error:', error);
+      Alert.alert('Error', error.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleReminders = async (value) => {
-    setRemindersEnabled(value);
-    await AsyncStorage.setItem('remindersEnabled', value.toString());
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchMedications();
+    setRefreshing(false);
   };
 
-  const formatTime = (time) => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
+  const formatSchedule = (schedule) => {
+    if (Array.isArray(schedule)) {
+      return schedule.join(', ');
+    }
+    return schedule;
   };
+
+  const handleUpdateStatus = async (medicationId, time, status) => {
+    try {
+      const result = await medicationService.updateReminderStatus(medicationId, time, status);
+      
+      if (result.success) {
+        Alert.alert('Success', `Status updated to ${status}`);
+        // Refresh medications
+        fetchMedications();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to update status');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message || 'An error occurred');
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading medications...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#1E1E1E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reminders</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Reminders</Text>
+          <TouchableOpacity onPress={() => onRefresh()}>
+            <Ionicons name="refresh" size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Reminders Toggle */}
-        <View style={styles.toggleCard}>
-          <View style={styles.toggleLeft}>
-            <View style={styles.toggleIcon}>
-              <Ionicons name="notifications" size={24} color="#5B67CA" />
-            </View>
-            <View>
-              <Text style={styles.toggleTitle}>Enable Reminders</Text>
-              <Text style={styles.toggleSubtitle}>Get notified for your medications</Text>
-            </View>
+        {/* Medications List */}
+        {medications.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="medical" size={64} color="#D1D5DB" />
+            <Text style={styles.emptyTitle}>No medications added yet</Text>
+            <Text style={styles.emptyText}>
+              Add your first medication from the "Add" tab
+            </Text>
           </View>
-          <Switch
-            value={remindersEnabled}
-            onValueChange={toggleReminders}
-            trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-            thumbColor={remindersEnabled ? '#5B67CA' : '#F3F4F6'}
-          />
-        </View>
-
-        {/* Upcoming Reminders */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming</Text>
-          
-          {medications.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="alarm-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No reminders set</Text>
-              <Text style={styles.emptySubtext}>Add medications to set up reminders</Text>
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => router.push('/add-medication')}
-              >
-                <Text style={styles.addButtonText}>Add Medication</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            medications.map((med, index) => (
-              <View key={index} style={styles.reminderCard}>
-                <View style={styles.timeSection}>
-                  <Text style={styles.time}>{formatTime(med.time)}</Text>
-                  <Text style={styles.frequency}>{med.frequency}</Text>
-                </View>
-                
-                <View style={styles.divider} />
-                
-                <View style={styles.medSection}>
-                  <View style={[styles.medIcon, { backgroundColor: med.color || '#E8EBFF' }]}>
-                    <Ionicons name="medkit" size={20} color="#5B67CA" />
+        ) : (
+          <View style={styles.medicationsContainer}>
+            {medications.map((med, index) => (
+              <View key={med._id || index} style={styles.medicationCard}>
+                {/* Medication Header */}
+                <View style={styles.medicationHeader}>
+                  <View style={styles.medicationInfo}>
+                    <Text style={styles.medicationName}>{med.name}</Text>
+                    <Text style={styles.medicationDosage}>{med.dosage}</Text>
                   </View>
-                  <View style={styles.medDetails}>
-                    <Text style={styles.medName}>{med.name}</Text>
-                    <Text style={styles.medDosage}>{med.dosage}</Text>
-                  </View>
-                  <TouchableOpacity>
-                    <Ionicons name="ellipsis-vertical" size={20} color="#9CA3AF" />
-                  </TouchableOpacity>
+                  <Ionicons name="checkmark-circle" size={28} color="#10B981" />
                 </View>
-              </View>
-            ))
-          )}
-        </View>
 
-        {/* Reminder Settings */}
-        {medications.length > 0 && (
-          <View style={styles.settingsSection}>
-            <Text style={styles.sectionTitle}>Reminder Settings</Text>
-            
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="time-outline" size={24} color="#6B7280" />
-                <Text style={styles.settingText}>Reminder Time Before</Text>
-              </View>
-              <View style={styles.settingRight}>
-                <Text style={styles.settingValue}>15 min</Text>
-                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
+                {/* Schedule Times */}
+                <View style={styles.scheduleContainer}>
+                  <Text style={styles.scheduleTitle}>Schedule:</Text>
+                  <View style={styles.timesGrid}>
+                    {Array.isArray(med.schedule) ? (
+                      med.schedule.map((time, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={styles.timeChip}
+                          onPress={() => handleUpdateStatus(med._id, time, 'Taken')}
+                        >
+                          <Ionicons name="time" size={16} color="#2563EB" />
+                          <Text style={styles.timeText}>{time}</Text>
+                        </TouchableOpacity>
+                      ))
+                    ) : (
+                      <Text style={styles.scheduleText}>
+                        {formatSchedule(med.schedule)}
+                      </Text>
+                    )}
+                  </View>
+                </View>
 
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="refresh-outline" size={24} color="#6B7280" />
-                <Text style={styles.settingText}>Repeat Reminder</Text>
+                {/* Reminders */}
+                {med.reminders && med.reminders.length > 0 && (
+                  <View style={styles.remindersContainer}>
+                    <Text style={styles.remindersTitle}>Reminders Status:</Text>
+                    {med.reminders.map((reminder, idx) => (
+                      <View key={idx} style={styles.reminderItem}>
+                        <Text style={styles.reminderText}>
+                          {reminder.time}: {reminder.status}
+                        </Text>
+                        <View style={[
+                          styles.statusBadge,
+                          reminder.status === 'Taken' && styles.statusTaken,
+                          reminder.status === 'Pending' && styles.statusPending,
+                          reminder.status === 'Skipped' && styles.statusSkipped,
+                        ]}>
+                          <Text style={styles.statusText}>{reminder.status}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
-              <View style={styles.settingRight}>
-                <Text style={styles.settingValue}>3 times</Text>
-                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="volume-high-outline" size={24} color="#6B7280" />
-                <Text style={styles.settingText}>Sound</Text>
-              </View>
-              <View style={styles.settingRight}>
-                <Text style={styles.settingValue}>Default</Text>
-                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
+            ))}
           </View>
         )}
+
+        <View style={styles.spacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -157,178 +185,165 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E1E1E',
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#111827',
   },
-  content: {
+  emptyContainer: {
     flex: 1,
-  },
-  toggleCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 16,
-  },
-  toggleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  toggleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#E8EBFF',
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  toggleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E1E1E',
-    marginBottom: 4,
-  },
-  toggleSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  section: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1E1E',
-    marginBottom: 16,
-  },
-  emptyState: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 40,
     alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 20,
   },
-  emptyText: {
-    fontSize: 16,
+  emptyTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
+    color: '#111827',
     marginTop: 16,
   },
-  emptySubtext: {
+  emptyText: {
     fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 4,
-    marginBottom: 24,
+    color: '#6B7280',
+    marginTop: 8,
     textAlign: 'center',
   },
-  addButton: {
-    backgroundColor: '#5B67CA',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+  medicationsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  reminderCard: {
-    backgroundColor: '#FFFFFF',
+  medicationCard: {
+    backgroundColor: '#FFF',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-  },
-  timeSection: {
+    padding: 16,
     marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  time: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E1E1E',
-    marginBottom: 4,
-  },
-  frequency: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-  medSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  medIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  medDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  medName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E1E1E',
-    marginBottom: 2,
-  },
-  medDosage: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  settingsSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  settingItem: {
+  medicationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
     marginBottom: 12,
   },
-  settingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  medicationInfo: {
+    flex: 1,
   },
-  settingText: {
-    fontSize: 16,
-    color: '#1E1E1E',
+  medicationName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
   },
-  settingRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  settingValue: {
+  medicationDosage: {
     fontSize: 14,
     color: '#6B7280',
+    marginTop: 4,
+  },
+  scheduleContainer: {
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  scheduleTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  timesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DBEAFE',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  timeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  scheduleText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  remindersContainer: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  remindersTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  reminderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  reminderText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  statusTaken: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusSkipped: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  spacing: {
+    height: 20,
   },
 });
