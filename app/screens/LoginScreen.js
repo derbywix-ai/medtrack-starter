@@ -69,11 +69,13 @@ export default function LoginScreen({ navigation }) {
 
         Alert.alert('Success', 'Logged in successfully!');
 
-        // Reset navigation stack and navigate to MainTabs
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs' }],
-        });
+        // Small delay to ensure data is saved, then reset to trigger AppNavigator re-render
+        setTimeout(() => {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AuthStack' }],
+          });
+        }, 500);
       } else {
         Alert.alert('Error', result.message || 'Login failed');
       }
