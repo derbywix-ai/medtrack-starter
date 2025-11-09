@@ -23,17 +23,6 @@
     },
     "web": {
       "favicon": "./assets/logo.png"
-    },
-    "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/logo.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
-        }
-      ]
-    ]
+    }
   }
 }
