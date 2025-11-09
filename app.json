@@ -21,13 +21,19 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "package": "com.coral_g.medtrack"
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "68edd68a-d55e-483a-addc-701b8ac1db4d"
+      }
+    }
   }
 }
