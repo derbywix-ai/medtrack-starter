@@ -10,8 +10,8 @@ import {
   ScrollView,
   Alert,
   Image,
+  Ionicons,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService } from '../services/api';
 
@@ -25,8 +25,6 @@ export default function SignupScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Track which field is focused to show requirements
   const [focusedField, setFocusedField] = useState(null);
 
   const validateEmail = (email) => {
@@ -85,9 +83,7 @@ export default function SignupScreen({ navigation }) {
         };
         await AsyncStorage.setItem('user', JSON.stringify(userData));
         
-        Alert.alert('Success', 'Account created successfully!');
-        
-        // Navigate to Login screen
+        console.log('✅ Signup successful - navigating to Login');
         navigation.navigate('Login');
         
       } else {
@@ -103,7 +99,6 @@ export default function SignupScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -115,7 +110,6 @@ export default function SignupScreen({ navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        {/* Logo */}
         <View style={styles.logoContainer}>
           <Image 
             source={require('../../assets/logo.png')} 
@@ -124,9 +118,7 @@ export default function SignupScreen({ navigation }) {
           />
         </View>
 
-        {/* Form */}
         <View style={styles.formCard}>
-          {/* Full Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name *</Text>
             <View style={styles.inputWrapper}>
@@ -147,7 +139,6 @@ export default function SignupScreen({ navigation }) {
             )}
           </View>
 
-          {/* Email */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address *</Text>
             <View style={styles.inputWrapper}>
@@ -172,7 +163,6 @@ export default function SignupScreen({ navigation }) {
             )}
           </View>
 
-          {/* Phone */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Phone Number *</Text>
             <View style={styles.inputWrapper}>
@@ -197,7 +187,6 @@ export default function SignupScreen({ navigation }) {
             )}
           </View>
 
-          {/* Password */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password *</Text>
             <View style={styles.inputWrapper}>
@@ -232,7 +221,6 @@ export default function SignupScreen({ navigation }) {
             )}
           </View>
 
-          {/* Confirm Password */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirm Password *</Text>
             <View style={styles.inputWrapper}>
@@ -261,7 +249,6 @@ export default function SignupScreen({ navigation }) {
             )}
           </View>
 
-          {/* Terms and Conditions */}
           <View style={styles.termsContainer}>
             <TouchableOpacity
               style={styles.checkbox}
@@ -285,7 +272,6 @@ export default function SignupScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Signup Button */}
         <TouchableOpacity
           style={[styles.signupButton, loading && styles.signupButtonDisabled]}
           onPress={handleSignup}
@@ -301,7 +287,6 @@ export default function SignupScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* Login Link */}
         <View style={styles.loginContainer}>
           <Text style={styles.loginText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>

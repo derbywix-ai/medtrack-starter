@@ -47,14 +47,10 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
 
     try {
-      // Call API
       const result = await authService.signin(email, password);
       setLoading(false);
 
       if (result.success) {
-        // Token is already saved in api.js via AsyncStorage
-        
-        // Store user data
         const userData = {
           id: result.data.user?.id || result.data.userId,
           name: result.data.user?.name || result.data.name || 'User',
@@ -62,15 +58,12 @@ export default function LoginScreen({ navigation }) {
         };
         await AsyncStorage.setItem('user', JSON.stringify(userData));
 
-        // Optionally save email if "Remember Me" is checked
         if (rememberMe) {
           await AsyncStorage.setItem('rememberedEmail', email);
         }
 
-        Alert.alert('Success', 'Logged in successfully!');
-        
-        // AppNavigator will automatically detect the login via useFocusEffect
-        // and show MainTabs - no need to navigate
+        console.log('✅ Login successful - AppNavigator will show MainTabs');
+        // AppNavigator detects login automatically - no alert needed
       } else {
         Alert.alert('Error', result.message || 'Login failed');
       }
@@ -81,7 +74,6 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleForgotPassword = () => {
-    // TODO: Navigate to forgot password screen
     Alert.alert('Info', 'Forgot password feature coming soon');
   };
 
@@ -89,7 +81,6 @@ export default function LoginScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -101,7 +92,6 @@ export default function LoginScreen({ navigation }) {
           <View style={{ width: 28 }} />
         </View>
 
-        {/* Logo */}
         <View style={styles.logoContainer}>
           <Image 
             source={require('../../assets/logo.png')} 
@@ -110,12 +100,9 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
-        {/* Subtitle */}
         <Text style={styles.subtitle}>Welcome back! Sign in to continue</Text>
 
-        {/* Form */}
         <View style={styles.formCard}>
-          {/* Email */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address *</Text>
             <View style={styles.inputWrapper}>
@@ -133,7 +120,6 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Password */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password *</Text>
             <View style={styles.inputWrapper}>
@@ -157,7 +143,6 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Remember Me & Forgot Password */}
           <View style={styles.bottomRow}>
             <View style={styles.rememberContainer}>
               <TouchableOpacity
@@ -184,7 +169,6 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Login Button */}
         <TouchableOpacity
           style={[styles.loginButton, loading && styles.loginButtonDisabled]}
           onPress={handleLogin}
@@ -200,7 +184,6 @@ export default function LoginScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* Signup Link */}
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
