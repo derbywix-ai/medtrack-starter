@@ -51,23 +51,29 @@ export default function ProfileScreen({ navigation }) {
           onPress: async () => {
             setSigningOut(true);
             try {
-              const result = await authService.signout();
+              console.log('🔐 Signing out...');
               
-              // Clear local data
+              // Clear local data FIRST - this is most important
               await AsyncStorage.removeItem('authToken');
               await AsyncStorage.removeItem('user');
               await AsyncStorage.removeItem('rememberedEmail');
-
-              if (result.success) {
-                Alert.alert('Success', 'You have been signed out');
-                // Navigation will automatically show AuthStack
-              } else {
-                Alert.alert('Error', result.message || 'Failed to sign out');
+              
+              console.log('✅ Local data cleared');
+              
+              // Try calling backend signout (but don't block on it)
+              try {
+                await authService.signout();
+                console.log('✅ Backend signout success');
+              } catch (e) {
+                console.log('⚠️ Backend signout error (ignoring):', e);
               }
+              
+              console.log('🔄 AppNavigator will detect logout and show Login');
+              setSigningOut(false);
+              
             } catch (error) {
-              console.error('Signout error:', error);
+              console.error('❌ Signout error:', error);
               Alert.alert('Error', error.message || 'An error occurred');
-            } finally {
               setSigningOut(false);
             }
           },
