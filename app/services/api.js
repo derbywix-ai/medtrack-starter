@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'https://medtrack-api-wgtk.onrender.com/api';
 
 // Auth Service
 export const authService = {
