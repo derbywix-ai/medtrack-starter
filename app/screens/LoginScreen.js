@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
-  Alert,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { authService } from '../services/api';
 
 export default function LoginScreen({ navigation }) {
@@ -68,14 +68,9 @@ export default function LoginScreen({ navigation }) {
         }
 
         Alert.alert('Success', 'Logged in successfully!');
-
-        // Small delay to ensure data is saved, then reset to trigger AppNavigator re-render
-        setTimeout(() => {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AuthStack' }],
-          });
-        }, 500);
+        
+        // AppNavigator will automatically detect the login via useFocusEffect
+        // and show MainTabs - no need to navigate
       } else {
         Alert.alert('Error', result.message || 'Login failed');
       }
