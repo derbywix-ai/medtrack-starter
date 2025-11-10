@@ -51,6 +51,9 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
 
       if (result.success) {
+        // Log the response to see what your backend returns
+        console.log('🔍 Backend response:', JSON.stringify(result.data, null, 2));
+        
         const userData = {
           id: result.data.user?.id || result.data.userId,
           name: result.data.user?.name || result.data.name || 'User',
@@ -58,12 +61,23 @@ export default function LoginScreen({ navigation }) {
         };
         await AsyncStorage.setItem('user', JSON.stringify(userData));
 
+        // Save the auth token - try different possible field names
+        const token = result.data.token || result.data.accessToken || result.data.jwt || result.data.authToken;
+        if (token) {
+          await AsyncStorage.setItem('authToken', token);
+          console.log('✅ Token saved successfully');
+        } else {
+          // Fallback if no token (temporary - fix backend later)
+          await AsyncStorage.setItem('authToken', 'logged-in');
+          console.log('⚠️ No token from backend, using fallback');
+        }
+
         if (rememberMe) {
           await AsyncStorage.setItem('rememberedEmail', email);
         }
 
         console.log('✅ Login successful - AppNavigator will show MainTabs');
-        // AppNavigator detects login automatically - no alert needed
+        // AppNavigator will auto-detect and switch screens
       } else {
         Alert.alert('Error', result.message || 'Login failed');
       }
