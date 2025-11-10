@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { medicationService } from '../services/api';
+import { notificationService } from '../services/notificationService';
 
 export default function ReminderScreen({ navigation }) {
   const [medications, setMedications] = useState([]);
@@ -23,25 +24,76 @@ export default function ReminderScreen({ navigation }) {
     fetchMedications();
   }, []);
 
+  // Schedule notifications when medications are loaded
+  useEffect(() => {
+    if (medications.length > 0) {
+      scheduleAllReminders();
+    }
+  }, [medications]);
+
+  const validateMedicationData = (medications) => {
+    if (!Array.isArray(medications)) {
+      console.log('❌ Medications is not an array:', medications);
+      return [];
+    }
+    
+    return medications.filter(med => {
+      const isValid = med && med.name;
+      if (!isValid) {
+        console.log('❌ Invalid medication item:', med);
+      }
+      return isValid;
+    });
+  };
+
   const fetchMedications = async () => {
     try {
       setLoading(true);
       console.log('📥 Fetching medications...');
 
       const result = await medicationService.getMedications();
-      console.log('📋 Medications response:', result);
+      console.log('📋 Full medications response:', JSON.stringify(result, null, 2));
 
       if (result.success) {
-        setMedications(result.data || []);
-        console.log('✅ Medications loaded:', result.data?.length || 0);
+        console.log('📊 Medications data structure:', {
+          data: result.data,
+          dataType: typeof result.data,
+          isArray: Array.isArray(result.data),
+          length: result.data?.length
+        });
+        
+        // Add fallback for different response structures
+        const medicationsData = result.data || result.medications || [];
+        const validatedMedications = validateMedicationData(medicationsData);
+        setMedications(validatedMedications);
+        console.log('✅ Valid medications loaded:', validatedMedications.length);
       } else {
+        console.log('❌ API returned success: false');
+        setMedications([]);
         Alert.alert('Error', result.message || 'Failed to fetch medications');
       }
     } catch (error) {
       console.error('❌ Fetch medications error:', error);
+      setMedications([]);
       Alert.alert('Error', error.message || 'An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const scheduleAllReminders = async () => {
+    try {
+      console.log('📅 Scheduling reminders for all medications...');
+      
+      for (const medication of medications) {
+        await notificationService.scheduleMedicationReminder(medication);
+      }
+      
+      // Log scheduled notifications for debugging
+      const scheduled = await notificationService.getScheduledNotifications();
+      console.log('📋 Currently scheduled notifications:', scheduled.length);
+    } catch (error) {
+      console.error('❌ Error scheduling reminders:', error);
     }
   };
 
@@ -64,13 +116,51 @@ export default function ReminderScreen({ navigation }) {
       
       if (result.success) {
         Alert.alert('Success', `Status updated to ${status}`);
-        // Refresh medications
+        
+        // If marked as taken, you might want to cancel the specific reminder
+        if (status === 'Taken') {
+          // Optional: Cancel the specific notification for this time
+          const scheduled = await notificationService.getScheduledNotifications();
+          const notificationToCancel = scheduled.find(notif => 
+            notif.content.data?.medicationId === medicationId && 
+            notif.content.data?.time === time
+          );
+          
+          if (notificationToCancel) {
+            await notificationService.cancelScheduledNotificationAsync(notificationToCancel.identifier);
+          }
+        }
+        
         fetchMedications();
       } else {
         Alert.alert('Error', result.message || 'Failed to update status');
       }
     } catch (error) {
       Alert.alert('Error', error.message || 'An error occurred');
+    }
+  };
+
+  // Test notification function
+  const testNotification = async () => {
+    try {
+      await notificationService.requestPermissions();
+      
+      // Test immediate notification
+      await notificationService.scheduleNotificationAsync({
+        content: {
+          title: 'Test Reminder',
+          body: 'This is a test notification!',
+          sound: 'default',
+        },
+        trigger: {
+          seconds: 5, // 5 seconds from now
+        },
+      });
+      
+      Alert.alert('Test', 'Test notification scheduled for 5 seconds from now');
+    } catch (error) {
+      console.error('Test notification error:', error);
+      Alert.alert('Error', 'Failed to schedule test notification');
     }
   };
 
@@ -98,9 +188,21 @@ export default function ReminderScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Reminders</Text>
-          <TouchableOpacity onPress={() => onRefresh()}>
-            <Ionicons name="refresh" size={24} color="#2563EB" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity onPress={testNotification} style={styles.testButton}>
+              <Ionicons name="notifications" size={20} color="#2563EB" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => onRefresh()}>
+              <Ionicons name="refresh" size={24} color="#2563EB" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Debug Info */}
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>
+            Medications loaded: {medications.length}
+          </Text>
         </View>
 
         {/* Medications List */}
@@ -111,6 +213,14 @@ export default function ReminderScreen({ navigation }) {
             <Text style={styles.emptyText}>
               Add your first medication from the "Add" tab
             </Text>
+            <TouchableOpacity 
+              style={styles.testNotificationButton}
+              onPress={testNotification}
+            >
+              <Text style={styles.testNotificationButtonText}>
+                Test Notifications
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.medicationsContainer}>
@@ -207,10 +317,29 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 16,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  testButton: {
+    padding: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+  },
+  debugContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
   },
   emptyContainer: {
     flex: 1,
@@ -230,6 +359,18 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
+  },
+  testNotificationButton: {
+    marginTop: 20,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  testNotificationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   medicationsContainer: {
     paddingHorizontal: 20,
