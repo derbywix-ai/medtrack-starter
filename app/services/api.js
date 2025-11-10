@@ -26,7 +26,6 @@ export const authService = {
       const data = await response.json();
       console.log('Signup response status:', response.status);
       console.log('Signup response data:', JSON.stringify(data, null, 2));
-      console.log('Error message from backend:', data.message);
 
       if (data.success) {
         if (data.token) {
@@ -61,7 +60,6 @@ export const authService = {
       const data = await response.json();
       console.log('Signin response status:', response.status);
       console.log('Signin response data:', JSON.stringify(data, null, 2));
-      console.log('Error message from backend:', data.message);
 
       if (data.success) {
         if (data.token) {
@@ -94,6 +92,7 @@ export const authService = {
 
       if (data.success) {
         await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('user');
         return { success: true };
       } else {
         return { success: false, message: data.message };
@@ -165,6 +164,10 @@ export const medicationService = {
     try {
       const token = await AsyncStorage.getItem('authToken');
 
+      if (!token) {
+        return { success: false, message: 'No token found' };
+      }
+
       const response = await fetch(`${BASE_URL}/reminder/list`, {
         method: 'GET',
         headers: {
@@ -180,10 +183,12 @@ export const medicationService = {
     }
   },
 
-  // Update Reminder Status
-  updateReminderStatus: async (reminderId, status) => {
+  // Update Reminder Status - FIXED VERSION
+  updateReminderStatus: async (medicationId, time, status) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
+
+      console.log('Updating reminder:', { medicationId, time, status });
 
       const response = await fetch(`${BASE_URL}/reminder/update-status`, {
         method: 'PATCH',
@@ -192,14 +197,70 @@ export const medicationService = {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          reminderId,
+          medicationId,  // ✅ Changed from reminderId
+          time,          // ✅ Added missing time parameter
           status,
         }),
       });
 
       const data = await response.json();
+      console.log('Update status response:', data);
       return data;
     } catch (error) {
+      console.error('Update status error:', error);
+      return { success: false, message: error.message };
+    }
+  },
+
+  // Update Medication - NEW FUNCTION
+  updateMedication: async (medicationId, medicationData) => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+
+      if (!token) {
+        return { success: false, message: 'No token found' };
+      }
+
+      const response = await fetch(`${BASE_URL}/reminder/update/${medicationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(medicationData),
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  // Delete Medication - NEW FUNCTION
+  deleteMedication: async (medicationId) => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+
+      if (!token) {
+        return { success: false, message: 'No token found' };
+      }
+
+      console.log('Deleting medication:', medicationId);
+
+      const response = await fetch(`${BASE_URL}/reminder/delete/${medicationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log('Delete response:', data);
+      return data;
+    } catch (error) {
+      console.error('Delete error:', error);
       return { success: false, message: error.message };
     }
   },
@@ -217,4 +278,5 @@ export const isLoggedIn = async () => {
 
 export const logout = async () => {
   await AsyncStorage.removeItem('authToken');
+  await AsyncStorage.removeItem('user');
 };
