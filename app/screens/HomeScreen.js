@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { medicationService } from '../services/api';
 
 export default function HomeScreen({ navigation }) {
@@ -25,6 +26,13 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadDashboard();
+    }, [])
+  );
 
   const loadDashboard = async () => {
     try {
@@ -42,13 +50,6 @@ export default function HomeScreen({ navigation }) {
         setMedications(result.data || []);
         
         // Filter today's reminders
-        const today = new Date();
-        const todayTime = today.toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        });
-
         const todayMeds = (result.data || []).filter(med => {
           return med.schedule && med.schedule.length > 0;
         });
@@ -191,7 +192,10 @@ export default function HomeScreen({ navigation }) {
                   </View>
                   <TouchableOpacity
                     style={styles.quickMarkButton}
-                    onPress={() => handleQuickMark(med._id, med.schedule[0], 'Taken')}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleQuickMark(med._id, med.schedule[0], 'Taken');
+                    }}
                   >
                     <Ionicons name="checkmark" size={20} color="#FFF" />
                   </TouchableOpacity>

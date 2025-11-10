@@ -1,0 +1,173 @@
+[33mcommit 602a15df1d9d79183ad8636d9d6344694464b889[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Mon Nov 10 06:20:34 2025 +0100
+
+    d
+
+[33mcommit 256610662f46faaf01f41221566406cf66fe2432[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Mon Nov 10 06:03:04 2025 +0100
+
+    m
+
+[33mcommit fde71edb923c901b22b095b2ca399397d240aa7c[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Mon Nov 10 00:54:32 2025 +0100
+
+    h
+
+[33mcommit 44d99d03afca6c872fe4cc8fea464eb6dda7299a[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Mon Nov 10 00:32:53 2025 +0100
+
+    h
+
+[33mcommit 89f5f1d8cc0a8e5e9edc96946032708d35cdbf4c[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Mon Nov 10 00:04:08 2025 +0100
+
+    j
+
+[33mcommit 2c75afb3891103555fdd66700a729eba38b4761b[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 23:11:43 2025 +0100
+
+    a
+
+[33mcommit cc487417b0ac35dc54e709b712f97f3bdda6d2cb[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 22:36:40 2025 +0100
+
+    d
+
+[33mcommit c57c4fccb90a89f2aead050cb310053ffbd40ca7[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 22:33:25 2025 +0100
+
+    h
+
+[33mcommit 413c312d8172ae957884afaaae5079e3836686bf[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 22:01:50 2025 +0100
+
+    G
+
+[33mcommit e8c06c7c74bb1eb1f8a808e07bc4c4bc636060d9[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 21:23:15 2025 +0100
+
+    nh
+
+[33mcommit 8a82dec4f986fe104f235fe0dff1f204a2c0ecf5[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 21:21:50 2025 +0100
+
+    Remove plugins from app.json
+
+[33mcommit 683c0a2dafc14d4f2af18261172091998b63055f[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 21:17:57 2025 +0100
+
+    Update app.json with splash screen plugin
+
+[33mcommit d4e3c8b875af22a779ece9e338ff7e2be89ac20a[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 20:52:01 2025 +0100
+
+    Add EAS configuration
+
+[33mcommit 90ff6a0657f4535a246bf22948d1fe13dfea3f5b[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sun Nov 9 19:41:52 2025 +0100
+
+    jj
+
+[33mcommit 8211bae0e90fae0d5549441e826d7a4beb2348e3[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sat Nov 8 22:41:28 2025 +0100
+
+    project
+
+[33mcommit 3f41c2096eb2a78a199064022255f87af8018b60[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Sat Nov 8 13:26:22 2025 +0100
+
+    Add API service
+
+[33mcommit 8389b10d32d0bc27845c199c4a470bdfec06b911[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Nov 7 18:02:27 2025 +0100
+
+    project
+
+[33mcommit a7f6fc9d6b8c54f464c8a137e7a7efce6a7d899b[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Nov 7 13:06:52 2025 +0100
+
+    project
+
+[33mcommit 5301b769fec21ee1ee73ea02e53f37557809d859[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Nov 7 13:01:43 2025 +0100
+
+    project
+
+[33mcommit 55b0d4a63c4d6d7affb6e688ca0f1d1a34180fca[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Nov 7 07:16:59 2025 +0100
+
+    Track package-lock.json
+
+[33mcommit b226eabbf8ebc0a7707b4e7bda2bf6e8782c1a92[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Nov 7 00:28:47 2025 +0100
+
+    project
+
+[33mcommit d5ded5db4b4136539fd21198cce885b29328b403[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Thu Nov 6 21:06:00 2025 +0100
+
+    Added AuthStack.js and MainTabs.js
+
+[33mcommit efd1b916ff31c92b4f02c9c188c65be9c365bfb9[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Thu Nov 6 20:59:44 2025 +0100
+
+    Added MedicationDetailScreen.js
+
+[33mcommit 1ceb3b2a8821474ded8343573e0450cbdc21e812[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Thu Nov 6 16:16:21 2025 +0100
+
+    project
+
+[33mcommit 9c2282322fc42a1516e09b16620d1920c34d3d69[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Thu Nov 6 14:34:13 2025 +0100
+
+    Add AuthStack and screen files
+
+[33mcommit 4449acbf583638beeaa96d08ad82c0547be1225d[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Thu Nov 6 12:09:19 2025 +0100
+
+    Add new screens and avatars
+
+[33mcommit 9f6a616911ed0580a9dfe464ad7ed36fcf6b0b12[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Tue Nov 4 14:53:06 2025 +0100
+
+    Initial commit
+
+[33mcommit 95e743a201bd7483829692f5ef0a48e7a70fb9f2[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Oct 31 20:54:03 2025 +0100
+
+    medtracker
+
+[33mcommit e44ed53ec5ca109476afc93066c2e0cc43c64a4c[m
+Author: derbywix-ai <derbywix@gmail.com>
+Date:   Fri Oct 31 20:48:04 2025 +0100
+
+    Initial commit

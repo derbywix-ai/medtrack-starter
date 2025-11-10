@@ -1,67 +1,94 @@
 import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createStackNavigator } from "@react-navigation/stack";
-import { useFocusEffect } from "@react-navigation/native";
-import SplashScreen from "../screens/SplashScreen";
+import { authService } from "../services/api";
 
-const Stack = createStackNavigator();
-
-export default function AppNavigator() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+export default function ProfileScreen({ navigation }) {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
-    
-    // Set up a listener for storage changes
-    const interval = setInterval(() => {
-      checkAuth();
-    }, 1000); // Check every second for auth changes
-    
-    return () => clearInterval(interval);
+    const loadUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error("Failed to load user:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUser();
   }, []);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      checkAuth();
-    }, [])
-  );
-
-  const checkAuth = async () => {
-    try {
-      const token = await AsyncStorage.getItem("authToken");
-      const user = await AsyncStorage.getItem("user");
-      
-      console.log("🔍 Auth check - Token:", !!token, "User:", !!user);
-      
-      const loggedIn = token && user ? true : false;
-      
-      // Only update state if it changed
-      setIsLoggedIn(prev => {
-        if (prev !== loggedIn) {
-          console.log(`🔄 Auth state changed: ${prev} → ${loggedIn}`);
-          return loggedIn;
-        }
-        return prev;
-      });
-      
-    } catch (error) {
-      console.error("Auth check error:", error);
-      setIsLoggedIn(false);
-    } finally {
-      setLoading(false);
-    }
+  const handleLogout = async () => {
+    await authService.signout();
+    await AsyncStorage.removeItem("user");
+    navigation.replace("AuthStack");
   };
 
-  if (loading) return <SplashScreen />;
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#007BFF" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.center}>
+        <Text>No user data found.</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.replace("AuthStack")}>
+          <Text style={styles.buttonText}>Go to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isLoggedIn ? (
-        <Stack.Screen name="MainTabs" component={MainTabs} />
-      ) : (
-        <Stack.Screen name="AuthStack" component={AuthStack} />
-      )}
-    </Stack.Navigator>
+    <View style={styles.container}>
+      <Text style={styles.title}>My Profile</Text>
+      <View style={styles.card}>
+        <Text style={styles.label}>Full Name</Text>
+        <Text style={styles.value}>{user.name}</Text>
+
+        <Text style={styles.label}>Email</Text>
+        <Text style={styles.value}>{user.email}</Text>
+
+        <Text style={styles.label}>Phone</Text>
+        <Text style={styles.value}>{user.phone}</Text>
+      </View>
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Sign Out</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fff", padding: 20 },
+  title: { fontSize: 24, fontWeight: "bold", marginBottom: 20, color: "#007BFF" },
+  card: { backgroundColor: "#f0f8ff", padding: 15, borderRadius: 10 },
+  label: { color: "#555", marginTop: 10 },
+  value: { fontSize: 16, fontWeight: "600", color: "#000" },
+  logoutButton: {
+    marginTop: 30,
+    backgroundColor: "#007BFF",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  logoutText: { color: "#fff", fontWeight: "600" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  button: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: "#007BFF",
+    borderRadius: 5,
+  },
+  buttonText: { color: "#fff" },
+});

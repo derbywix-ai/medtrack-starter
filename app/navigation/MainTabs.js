@@ -18,6 +18,7 @@ function HomeStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HomeTab" component={HomeScreen} />
       <Stack.Screen name="MedicationDetails" component={MedicationDetailScreen} />
+      <Stack.Screen name="AddMedication" component={AddMedicationScreen} />
     </Stack.Navigator>
   );
 }

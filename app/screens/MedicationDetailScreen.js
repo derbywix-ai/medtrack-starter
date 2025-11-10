@@ -16,9 +16,13 @@ import { medicationService } from '../services/api';
 export default function MedicationDetailScreen({ navigation, route }) {
   const { medication } = route.params || {};
   const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState(null);
 
   const handleMarkStatus = async (time, status) => {
+    if (!medication._id) {
+      Alert.alert('Error', 'Medication ID is missing');
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await medicationService.updateReminderStatus(
@@ -28,16 +32,68 @@ export default function MedicationDetailScreen({ navigation, route }) {
       );
 
       if (result.success) {
-        setSelectedStatus(`${time} - ${status}`);
-        Alert.alert('Success', `Marked as ${status}!`);
+        Alert.alert('Success', `Marked as ${status}!`, [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Go back to refresh the list
+              navigation.goBack();
+            }
+          }
+        ]);
       } else {
         Alert.alert('Error', result.message || 'Failed to update status');
       }
     } catch (error) {
+      console.error('Mark status error:', error);
       Alert.alert('Error', error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = () => {
+    // Navigate to AddMedication screen with edit mode
+    navigation.navigate('AddMedication', { 
+      medication: medication,
+      isEdit: true 
+    });
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Delete Medication',
+      `Are you sure you want to delete ${medication.name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const result = await medicationService.deleteMedication(medication._id);
+              
+              if (result.success) {
+                Alert.alert('Success', 'Medication deleted successfully', [
+                  {
+                    text: 'OK',
+                    onPress: () => navigation.goBack()
+                  }
+                ]);
+              } else {
+                Alert.alert('Error', result.message || 'Failed to delete medication');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', error.message || 'An error occurred');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (!medication) {
@@ -186,13 +242,27 @@ export default function MedicationDetailScreen({ navigation, route }) {
 
         {/* Action Buttons */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={handleEdit}
+            disabled={loading}
+          >
             <Ionicons name="pencil" size={20} color="#FFF" />
             <Text style={styles.editButtonText}>Edit Medication</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton}>
-            <Ionicons name="trash" size={20} color="#FFF" />
-            <Text style={styles.deleteButtonText}>Delete Medication</Text>
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <>
+                <Ionicons name="trash" size={20} color="#FFF" />
+                <Text style={styles.deleteButtonText}>Delete Medication</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
